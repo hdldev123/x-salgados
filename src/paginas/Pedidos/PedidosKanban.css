@@ -1,0 +1,348 @@
+/* Kanban Board - Sistema de Gestão de Pedidos */
+
+.kanban-board {
+  width: 100%;
+}
+
+.kanban-header {
+  margin-bottom: var(--espacamento-lg);
+  text-align: center;
+}
+
+.kanban-title {
+  font-size: var(--tamanho-texto-3xl);
+  font-weight: var(--peso-bold);
+  color: var(--cor-texto);
+  margin-bottom: var(--espacamento-xs);
+  line-height: var(--altura-linha-compacta);
+}
+
+.kanban-subtitle {
+  font-size: var(--tamanho-texto-base);
+  color: var(--cor-texto-secundario);
+  margin: 0;
+}
+
+.kanban-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espacamento-md);
+  min-height: 70vh;
+}
+
+/* Colunas do Kanban */
+.kanban-coluna {
+  background-color: var(--cor-fundo-card);
+  border-radius: var(--borda-radius);
+  border: 1px solid var(--cor-borda);
+  box-shadow: var(--sombra-padrao);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kanban-coluna-header {
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  background: linear-gradient(135deg, var(--cor-fundo), var(--cor-fundo-card));
+  border-top: 4px solid #4CAF50;
+  border-bottom: 1px solid var(--cor-borda);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-info {
+  flex: 1;
+}
+
+.coluna-titulo {
+  font-size: var(--tamanho-texto-lg);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-texto);
+  margin: 0 0 4px 0;
+  line-height: var(--altura-linha-compacta);
+}
+
+.coluna-descricao {
+  font-size: var(--tamanho-texto-xs);
+  color: var(--cor-texto-secundario);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pedidos-contador {
+  background-color: var(--cor-primaria);
+  color: var(--cor-texto-claro);
+  padding: 4px var(--espacamento-xs);
+  border-radius: 12px;
+  font-size: var(--tamanho-texto-xs);
+  font-weight: var(--peso-semibold);
+  min-width: 24px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Lista de pedidos */
+.kanban-lista {
+  flex: 1;
+  padding: var(--espacamento-sm);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-sm);
+}
+
+/* Cards dos pedidos */
+.pedido-card {
+  background-color: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--borda-radius);
+  padding: var(--espacamento-sm);
+  box-shadow: 0 2px 4px rgba(52, 58, 64, 0.05);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+}
+
+.pedido-card:hover {
+  box-shadow: var(--sombra-hover);
+  transform: translateY(-2px);
+  border-color: var(--cor-primaria);
+}
+
+.pedido-card.updating {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.pedido-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--espacamento-xs);
+}
+
+.pedido-id {
+  font-size: var(--tamanho-texto-xs);
+  color: var(--cor-texto-secundario);
+  font-weight: var(--peso-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pedido-total {
+  font-size: var(--tamanho-texto-lg);
+  font-weight: var(--peso-bold);
+  color: var(--cor-primaria);
+  line-height: var(--altura-linha-compacta);
+}
+
+.pedido-cliente {
+  font-size: var(--tamanho-texto-base);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-texto);
+  margin-bottom: var(--espacamento-xs);
+  line-height: var(--altura-linha-compacta);
+}
+
+.pedido-data {
+  font-size: var(--tamanho-texto-sm);
+  color: var(--cor-texto-secundario);
+  margin-bottom: var(--espacamento-sm);
+}
+
+.pedido-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--espacamento-sm);
+  padding-top: var(--espacamento-xs);
+  border-top: 1px solid var(--cor-borda);
+}
+
+/* Dropdown de status */
+.status-dropdown {
+  position: relative;
+}
+
+.status-select {
+  background-color: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 6px;
+  padding: 4px var(--espacamento-xs);
+  font-size: var(--tamanho-texto-xs);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-texto);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--fonte-principal);
+  outline: none;
+  min-width: 90px;
+}
+
+.status-select:hover:not(:disabled) {
+  border-color: var(--cor-primaria);
+  background-color: rgba(76, 175, 80, 0.02);
+}
+
+.status-select:focus {
+  border-color: var(--cor-primaria);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.status-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Indicador de atualização */
+.updating-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-xs);
+  font-size: var(--tamanho-texto-xs);
+  color: var(--cor-primaria);
+  font-weight: var(--peso-medio);
+}
+
+.spinner-mini {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--cor-borda);
+  border-top: 2px solid var(--cor-primaria);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Estado vazio */
+.coluna-vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espacamento-lg);
+  color: var(--cor-texto-secundario);
+  text-align: center;
+  margin-top: var(--espacamento-md);
+}
+
+.vazia-icon {
+  font-size: 2rem;
+  margin-bottom: var(--espacamento-xs);
+  opacity: 0.5;
+}
+
+.coluna-vazia p {
+  font-size: var(--tamanho-texto-sm);
+  margin: 0;
+}
+
+/* Animações */
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsividade */
+@media (max-width: 1200px) {
+  .kanban-container {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--espacamento-sm);
+  }
+  
+  .kanban-coluna-header {
+    padding: var(--espacamento-xs) var(--espacamento-sm);
+  }
+  
+  .coluna-titulo {
+    font-size: var(--tamanho-texto-base);
+  }
+}
+
+@media (max-width: 768px) {
+  .kanban-container {
+    grid-template-columns: 1fr;
+    gap: var(--espacamento-sm);
+  }
+  
+  .kanban-lista {
+    max-height: 300px;
+  }
+  
+  .pedido-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--espacamento-xs);
+  }
+  
+  .pedido-total {
+    font-size: var(--tamanho-texto-base);
+  }
+  
+  .kanban-title {
+    font-size: var(--tamanho-texto-2xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .kanban-header {
+    margin-bottom: var(--espacamento-sm);
+  }
+  
+  .kanban-title {
+    font-size: var(--tamanho-texto-xl);
+  }
+  
+  .kanban-subtitle {
+    font-size: var(--tamanho-texto-sm);
+  }
+  
+  .pedido-card {
+    padding: var(--espacamento-xs);
+  }
+  
+  .pedido-cliente {
+    font-size: var(--tamanho-texto-sm);
+  }
+  
+  .status-select {
+    font-size: 10px;
+    padding: 2px 4px;
+    min-width: 80px;
+  }
+}
+
+/* Scrollbar personalizada para listas */
+.kanban-lista::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kanban-lista::-webkit-scrollbar-track {
+  background: var(--cor-fundo);
+  border-radius: 3px;
+}
+
+.kanban-lista::-webkit-scrollbar-thumb {
+  background: var(--cor-texto-secundario);
+  border-radius: 3px;
+}
+
+.kanban-lista::-webkit-scrollbar-thumb:hover {
+  background: var(--cor-texto);
+}

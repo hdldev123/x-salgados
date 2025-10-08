@@ -1,15 +1,69 @@
-.rotas-grid {
+/* Cabeçalho das Rotas */
+.cabecalho-rotas {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--espacamento-lg);
+  gap: var(--espacamento-sm);
+}
+
+.cabecalho-info {
+  flex: 1;
+}
+
+/* Estatísticas das Rotas */
+.estatisticas-rotas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--espacamento-sm);
+  margin-bottom: var(--espacamento-lg);
+}
+
+.estatistica {
+  background-color: var(--cor-fundo-card);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--borda-radius);
+  padding: var(--espacamento-sm);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.estatistica:hover {
+  box-shadow: var(--sombra-padrao);
+  transform: translateY(-2px);
+}
+
+.estatistica .numero {
+  display: block;
+  font-size: var(--tamanho-texto-2xl);
+  font-weight: var(--peso-bold);
+  color: var(--cor-primaria);
+  line-height: var(--altura-linha-compacta);
+}
+
+.estatistica .label {
+  display: block;
+  font-size: var(--tamanho-texto-xs);
+  color: var(--cor-texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Container das Rotas */
+.rotas-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: var(--espacamento-md);
 }
 
+/* Cards das Rotas */
 .rota-card {
   background-color: var(--cor-fundo-card);
-  padding: var(--espacamento-md);
   border-radius: var(--borda-radius);
   box-shadow: var(--sombra-padrao);
   border: 1px solid var(--cor-borda);
+  overflow: hidden;
   transition: all 0.2s ease;
 }
 
@@ -18,175 +72,305 @@
   transform: translateY(-2px);
 }
 
-.rota-cep {
-  font-size: var(--tamanho-texto-xl);
-  color: var(--cor-primaria);
-  font-weight: var(--peso-semibold);
-  border-bottom: 2px solid var(--cor-primaria);
-  padding-bottom: var(--espacamento-xs);
-  margin-bottom: var(--espacamento-sm);
-  font-family: var(--fonte-principal);
-  line-height: var(--altura-linha-compacta);
+.rota-card.aguardando {
+  border-left: 4px solid #ffc107;
 }
 
-.rota-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--espacamento-sm);
-  padding: var(--espacamento-xs) 0;
+.rota-card.em_entrega {
+  border-left: 4px solid var(--cor-primaria);
 }
 
-.rota-total-pedidos {
-  font-size: var(--tamanho-texto-sm);
-  color: var(--cor-texto-secundario);
-  font-weight: var(--peso-medio);
+.rota-card.concluida {
+  border-left: 4px solid var(--cor-sucesso);
+  opacity: 0.8;
 }
 
-.rota-valor-total {
-  font-size: var(--tamanho-texto-lg);
-  color: var(--cor-texto);
-  font-weight: var(--peso-semibold);
-}
-
-.pedidos-lista {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.pedido-card {
-  border: 1px solid var(--cor-borda);
-  padding: var(--espacamento-sm);
-  border-radius: var(--borda-radius);
-  margin-bottom: var(--espacamento-xs);
-  background-color: var(--cor-fundo);
-  transition: background-color 0.2s ease;
-}
-
-.pedido-card:hover {
-  background-color: rgba(76, 175, 80, 0.02);
-}
-
-.pedido-card:last-child {
-  margin-bottom: 0;
-}
-
-.pedido-cabecalho {
+/* Header do Card da Rota */
+.rota-header {
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  background: linear-gradient(135deg, var(--cor-fundo), var(--cor-fundo-card));
+  border-bottom: 1px solid var(--cor-borda);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--espacamento-xs);
 }
 
-.pedido-cliente {
+.rota-titulo {
+  font-size: var(--tamanho-texto-lg);
   font-weight: var(--peso-semibold);
   color: var(--cor-texto);
-  font-size: var(--tamanho-texto-base);
+  margin: 0 0 var(--espacamento-xs) 0;
   line-height: var(--altura-linha-compacta);
 }
 
-.pedido-numero {
-  font-size: var(--tamanho-texto-xs);
-  color: var(--cor-texto-secundario);
-  font-weight: var(--peso-normal);
-}
-
-.pedido-endereco {
-  color: var(--cor-texto-secundario);
-  margin-bottom: var(--espacamento-xs);
-  font-size: var(--tamanho-texto-sm);
-  line-height: var(--altura-linha);
-}
-
-.pedido-rodape {
+.rota-meta {
   display: flex;
-  justify-content: space-between;
+  gap: var(--espacamento-sm);
   align-items: center;
-  margin-top: var(--espacamento-xs);
 }
 
-.pedido-total {
-  font-weight: var(--peso-semibold);
-  color: var(--cor-texto);
-  font-size: var(--tamanho-texto-base);
-}
-
-.status-tag {
-  padding: 4px var(--espacamento-xs);
-  border-radius: 12px;
+.pedidos-count {
   font-size: var(--tamanho-texto-xs);
-  font-weight: var(--peso-medio);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  line-height: 1;
+  color: var(--cor-texto-secundario);
+  background-color: var(--cor-fundo);
+  padding: 2px var(--espacamento-xs);
+  border-radius: 4px;
 }
 
-.status-pendente {
+.valor-rota {
+  font-size: var(--tamanho-texto-base);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-primaria);
+}
+
+/* Status Badge */
+.status-badge {
+  padding: 4px var(--espacamento-xs);
+  border-radius: 6px;
+  font-size: var(--tamanho-texto-xs);
+  font-weight: var(--peso-semibold);
+  line-height: 1.2;
+}
+
+.status-badge.aguardando {
   background-color: rgba(255, 193, 7, 0.1);
   color: #856404;
   border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
-.status-a_caminho {
+.status-badge.em_entrega {
   background-color: rgba(76, 175, 80, 0.1);
   color: var(--cor-primaria);
   border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
-.status-entregue {
+.status-badge.concluida {
   background-color: rgba(40, 167, 69, 0.1);
   color: var(--cor-sucesso);
   border: 1px solid rgba(40, 167, 69, 0.3);
 }
 
-.rota-acoes {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: var(--espacamento-sm);
-  padding-top: var(--espacamento-sm);
-  border-top: 1px solid var(--cor-borda);
+/* CEPs da Rota */
+.rota-ceps {
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: var(--tamanho-texto-sm);
 }
 
-.concluir-rota {
-  padding: var(--espacamento-xs) var(--espacamento-sm);
-  border: none;
+.ceps-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacamento-xs);
+  margin-top: var(--espacamento-xs);
+}
+
+.cep-badge {
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto-secundario);
+  padding: 2px var(--espacamento-xs);
+  border-radius: 4px;
+  font-size: var(--tamanho-texto-xs);
+  font-weight: var(--peso-medio);
+  border: 1px solid var(--cor-borda);
+}
+
+/* Pedidos da Rota */
+.pedidos-rota {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: var(--espacamento-xs);
+}
+
+.pedido-entrega {
+  background-color: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
   border-radius: var(--borda-radius);
+  padding: var(--espacamento-sm);
+  margin-bottom: var(--espacamento-xs);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--espacamento-sm);
+  transition: all 0.2s ease;
+}
+
+.pedido-entrega:hover {
+  background-color: rgba(76, 175, 80, 0.02);
+  border-color: var(--cor-primaria);
+}
+
+.pedido-entrega:last-child {
+  margin-bottom: 0;
+}
+
+.pedido-info {
+  flex: 1;
+}
+
+.cliente-nome {
+  font-size: var(--tamanho-texto-base);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-texto);
+  margin: 0 0 4px 0;
+  line-height: var(--altura-linha-compacta);
+}
+
+.cliente-endereco {
+  font-size: var(--tamanho-texto-sm);
+  color: var(--cor-texto-secundario);
+  margin: 0 0 4px 0;
+  line-height: var(--altura-linha);
+}
+
+.cliente-telefone {
+  font-size: var(--tamanho-texto-sm);
+  color: var(--cor-texto-secundario);
+  margin: 0 0 var(--espacamento-xs) 0;
+}
+
+.pedido-valor {
+  font-size: var(--tamanho-texto-base);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-primaria);
+}
+
+/* Botão Entregar */
+.botao-entregar {
   background-color: var(--cor-sucesso);
   color: var(--cor-texto-claro);
-  font-size: var(--tamanho-texto-sm);
+  border: none;
+  border-radius: var(--borda-radius);
+  padding: var(--espacamento-xs) var(--espacamento-sm);
+  font-size: var(--tamanho-texto-xs);
   font-weight: var(--peso-semibold);
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: var(--fonte-principal);
+  flex-shrink: 0;
 }
 
-.concluir-rota:hover {
+.botao-entregar:hover {
   background-color: #218838;
   transform: translateY(-1px);
 }
 
-.concluir-rota:disabled {
-  background-color: var(--cor-texto-secundario);
-  cursor: not-allowed;
-  transform: none;
+/* Ações da Rota */
+.rota-acoes {
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  border-top: 1px solid var(--cor-borda);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-entrega {
+  font-size: var(--tamanho-texto-sm);
+  color: var(--cor-texto-secundario);
+}
+
+.info-entrega.concluida {
+  color: var(--cor-sucesso);
+  font-weight: var(--peso-semibold);
+}
+
+/* Estado vazio */
+.estado-vazio {
+  text-align: center;
+  padding: var(--espacamento-xxl);
+  color: var(--cor-texto-secundario);
+}
+
+.estado-vazio .vazia-icon {
+  font-size: 4rem;
+  margin-bottom: var(--espacamento-sm);
+  opacity: 0.5;
+}
+
+.estado-vazio h3 {
+  font-size: var(--tamanho-texto-xl);
+  color: var(--cor-texto);
+  margin-bottom: var(--espacamento-xs);
+}
+
+.estado-vazio p {
+  font-size: var(--tamanho-texto-base);
+  margin: 0;
+}
+
+/* Scrollbar personalizada */
+.pedidos-rota::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pedidos-rota::-webkit-scrollbar-track {
+  background: var(--cor-fundo);
+  border-radius: 3px;
+}
+
+.pedidos-rota::-webkit-scrollbar-thumb {
+  background: var(--cor-texto-secundario);
+  border-radius: 3px;
+}
+
+.pedidos-rota::-webkit-scrollbar-thumb:hover {
+  background: var(--cor-texto);
 }
 
 /* Responsividade */
+@media (max-width: 1200px) {
+  .rotas-container {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
-  .rotas-grid {
+  .cabecalho-rotas {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .rotas-container {
     grid-template-columns: 1fr;
   }
   
-  .pedido-cabecalho {
+  .estatisticas-rotas {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .rota-header {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--espacamento-xs);
   }
   
-  .pedido-rodape {
+  .pedido-entrega {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--espacamento-xs);
+  }
+  
+  .pedidos-rota {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .estatisticas-rotas {
+    grid-template-columns: 1fr;
+  }
+  
+  .rota-meta {
     flex-direction: column;
     align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .ceps-lista {
+    flex-direction: column;
+  }
+  
+  .rota-acoes {
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--espacamento-xs);
   }
 }   
