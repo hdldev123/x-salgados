@@ -60,6 +60,7 @@ function RotasDeEntrega() {
                 </span>
               </div>
             ))}
+            <button className="concluir-rota">Concluir Rota</button>
           </div>
         ))}
       </div>

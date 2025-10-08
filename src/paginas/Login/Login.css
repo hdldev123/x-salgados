@@ -4,38 +4,84 @@
   align-items: center;
   min-height: 100vh;
   background-color: var(--cor-fundo);
+  padding: var(--espacamento-sm);
 }
 
 .login-card {
   width: 100%;
-  max-width: 400px;
-  padding: 3rem;
+  max-width: 420px;
+  padding: var(--espacamento-xxl);
   background-color: var(--cor-fundo-card);
-  border-radius: var(--borda-radius);
-  box-shadow: var(--sombra-padrao);
+  border-radius: var(--borda-radius-lg);
+  box-shadow: var(--sombra-hover);
   text-align: center;
+  border: 1px solid var(--cor-borda);
 }
 
 .login-titulo {
-  font-size: 2.5rem;
-  color: var(--cor-primaria);
-  font-weight: 700;
+  font-size: var(--tamanho-texto-4xl);
+  color: var(--cor-texto);
+  font-weight: var(--peso-bold);
+  font-family: var(--fonte-principal);
+  line-height: var(--altura-linha-compacta);
+  margin-bottom: var(--espacamento-xs);
 }
 
 .login-subtitulo {
-  margin-bottom: 2rem;
-  color: #666;
+  margin-bottom: var(--espacamento-lg);
+  color: var(--cor-texto-secundario);
+  font-size: var(--tamanho-texto-base);
+  font-weight: var(--peso-normal);
+  line-height: var(--altura-linha);
+}
+
+.login-form {
+  text-align: left;
 }
 
 .login-botao {
   width: 100%;
-  margin-top: 1rem;
+  margin-top: var(--espacamento-sm);
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  font-size: var(--tamanho-texto-base);
+  font-weight: var(--peso-semibold);
 }
 
 .mensagem-erro {
-    color: var(--cor-erro);
-    background-color: rgba(244, 67, 54, 0.1);
-    padding: 0.8rem;
-    border-radius: var(--borda-radius);
-    margin-top: 1rem;
+  color: var(--cor-erro);
+  background-color: rgba(220, 53, 69, 0.1);
+  padding: var(--espacamento-sm);
+  border-radius: var(--borda-radius);
+  margin-top: var(--espacamento-sm);
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  font-size: var(--tamanho-texto-sm);
+  font-weight: var(--peso-medio);
+  text-align: left;
+}
+
+/* Animação suave para o card de login */
+.login-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsividade para mobile */
+@media (max-width: 480px) {
+  .login-card {
+    padding: var(--espacamento-lg);
+  }
+  
+  .login-titulo {
+    font-size: var(--tamanho-texto-3xl);
+  }
 }
