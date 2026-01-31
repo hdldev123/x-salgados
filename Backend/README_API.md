@@ -23,36 +23,41 @@ API Backend completa em .NET 8 para sistema de gestão de lanchonete.
 2. Execute o script `Scripts/create_tables.sql` no SQL Editor do Supabase
 3. Copie a connection string do Supabase
 
-### 2. Configurar appsettings.json
+### 2. Configurar variáveis de ambiente
+
+Crie um arquivo `appsettings.Development.json` na pasta Backend (este arquivo NÃO vai para o Git):
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Host=SEU_HOST.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=SUA_SENHA;SSL Mode=Require;Trust Server Certificate=true"
+    "DefaultConnection": "Host=aws-X-sa-east-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.SEU_PROJECT_ID;Password=SUA_SENHA;SSL Mode=Require;Trust Server Certificate=true"
   },
   "Jwt": {
-    "Key": "SuaChaveSecretaJWT_ComNoMinimo32Caracteres",
-    "Issuer": "XSalgadosApi",
-    "Audience": "XSalgadosApp"
+    "Key": "SuaChaveSecretaJWT_ComNoMinimo32Caracteres"
   }
 }
 ```
 
+> ?? **IMPORTANTE**: Use a connection string do **Session Pooler** (porta 6543) do Supabase, não a conexão direta.
+
 ### 3. Executar
 
 ```bash
+cd Backend
 dotnet run
 ```
 
-A API estará disponível em `https://localhost:5001` e o Swagger em `https://localhost:5001/swagger`
+A API estará disponível em `http://localhost:5205` e o Swagger em `http://localhost:5205/swagger`
 
 ## ?? Autenticação
 
-### Usuário Padrão (após seed)
+### Usuário Padrão (criado pelo script SQL)
 
 - **Email:** admin@xsalgados.com
-- **Senha:** admin123
+- **Senha:** admin123 *(altere após o primeiro login)*
 - **Perfil:** Administrador
+
+> ?? **SEGURANÇA**: Em produção, altere imediatamente as credenciais padrão!
 
 ### Endpoints de Auth
 
@@ -185,8 +190,24 @@ Backend/
 
 ## ?? Testando no Swagger
 
-1. Execute a API
-2. Acesse `/swagger`
+1. Execute a API com `dotnet run`
+2. Acesse `http://localhost:5205/swagger`
 3. Use o endpoint `/api/auth/login` para obter o token
 4. Clique em "Authorize" e insira: `Bearer {seu_token}`
 5. Teste os endpoints
+
+## ?? Segurança
+
+### Arquivos sensíveis (NÃO commitados no Git)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `appsettings.Development.json` | Connection strings e chaves reais (dev) |
+| `appsettings.Production.json` | Connection strings e chaves reais (prod) |
+
+### Boas práticas
+
+- ? Use variáveis de ambiente em produção
+- ? Rotacione senhas regularmente
+- ? Use senhas fortes para o banco de dados
+- ? Gere chaves JWT únicas para cada ambiente
