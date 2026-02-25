@@ -1,0 +1,18 @@
+[
+  { "id": 101, "clienteId": 1, "dataPedido": "2025-10-25T10:00:00Z", "status": "ENTREGUE", "total": 150.50 },
+  { "id": 102, "clienteId": 2, "dataPedido": "2025-10-25T11:30:00Z", "status": "ENTREGUE", "total": 275.00 },
+  { "id": 103, "clienteId": 3, "dataPedido": "2025-10-26T09:15:00Z", "status": "A_CAMINHO", "total": 95.75 },
+  { "id": 104, "clienteId": 4, "dataPedido": "2025-10-26T09:45:00Z", "status": "EM_PREPARO", "total": 120.00 },
+  { "id": 105, "clienteId": 5, "dataPedido": "2025-10-26T10:20:00Z", "status": "PENDENTE", "total": 310.25 },
+  { "id": 106, "clienteId": 1, "dataPedido": "2025-10-26T14:00:00Z", "status": "PENDENTE", "total": 180.00 },
+  { "id": 107, "clienteId": 6, "dataPedido": "2025-10-24T18:00:00Z", "status": "ENTREGUE", "total": 550.00 },
+  { "id": 108, "clienteId": 7, "dataPedido": "2025-10-26T11:00:00Z", "status": "EM_PREPARO", "total": 420.50 },
+  { "id": 109, "clienteId": 8, "dataPedido": "2025-10-25T16:00:00Z", "status": "CANCELADO", "total": 80.00 },
+  { "id": 110, "clienteId": 9, "dataPedido": "2025-10-26T12:00:00Z", "status": "PENDENTE", "total": 215.80 },
+  { "id": 111, "clienteId": 10, "dataPedido": "2025-10-26T09:00:00Z", "status": "A_CAMINHO", "total": 300.00 },
+  { "id": 112, "clienteId": 2, "dataPedido": "2025-10-26T13:30:00Z", "status": "PENDENTE", "total": 250.00 },
+  { "id": 113, "clienteId": 11, "dataPedido": "2025-10-23T15:00:00Z", "status": "ENTREGUE", "total": 180.00 },
+  { "id": 114, "clienteId": 12, "dataPedido": "2025-10-26T10:00:00Z", "status": "EM_PREPARO", "total": 600.00 },
+  { "id": 115, "clienteId": 13, "dataPedido": "2025-10-26T15:00:00Z", "status": "PENDENTE", "total": 350.00 },
+  { "id": 116, "clienteId": 3, "dataPedido": "2025-10-26T09:15:00Z", "status": "A_CAMINHO", "total": 115.50 }
+]

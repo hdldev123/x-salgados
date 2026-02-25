@@ -1,0 +1,77 @@
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(52, 58, 64, 0.6);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--cor-fundo-card);
+  padding: var(--espacamento-lg);
+  border-radius: var(--borda-radius-lg);
+  box-shadow: 0 20px 40px rgba(52, 58, 64, 0.15);
+  z-index: 1001;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--cor-borda);
+  padding-bottom: var(--espacamento-sm);
+  margin-bottom: var(--espacamento-md);
+}
+
+.modal-titulo {
+  font-size: var(--tamanho-texto-2xl);
+  color: var(--cor-texto);
+  font-weight: var(--peso-semibold);
+  font-family: var(--fonte-principal);
+  line-height: var(--altura-linha-compacta);
+}
+
+.modal-botao-fechar {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--tamanho-texto-2xl);
+  color: var(--cor-texto-secundario);
+  padding: var(--espacamento-xs);
+  border-radius: var(--borda-radius);
+  transition: all 0.2s ease;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-botao-fechar:hover {
+  color: var(--cor-erro);
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+.modal-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espacamento-sm);
+  margin-top: var(--espacamento-md);
+  padding-top: var(--espacamento-sm);
+  border-top: 1px solid var(--cor-borda);
+}
+
+/* Classe adicionada ao body para impedir o scroll da página de fundo */
+body.modal-aberto {
+  overflow: hidden;
+}

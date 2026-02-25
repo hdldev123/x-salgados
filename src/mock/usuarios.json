@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "nome": "Admin Geral",
+    "email": "admin@xsalgados.com",
+    "senha": "admin",
+    "role": "ADMINISTRADOR"
+  },
+  {
+    "id": 2,
+    "nome": "Ana Atendente",
+    "email": "atendente@xsalgados.com",
+    "senha": "atendente",
+    "role": "ATENDENTE"
+  },
+  {
+    "id": 3,
+    "nome": "Carlos Entregador",
+    "email": "entregador@xsalgados.com",
+    "senha": "entregador",
+    "role": "ENTREGADOR"
+  },
+  {
+    "id": 4,
+    "nome": "Beatriz Silva",
+    "email": "beatriz@xsalgados.com",
+    "senha": "senha123",
+    "role": "ATENDENTE"
+  }
+]

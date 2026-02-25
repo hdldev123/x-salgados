@@ -1,0 +1,89 @@
+.tabela-container {
+  overflow-x: auto;
+  background-color: var(--cor-fundo-card);
+  border-radius: var(--borda-radius);
+  box-shadow: var(--sombra-padrao);
+  border: 1px solid var(--cor-borda);
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--fonte-principal);
+}
+
+.tabela th, .tabela td {
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda);
+  vertical-align: middle;
+}
+
+.tabela th {
+  background-color: var(--cor-fundo);
+  font-weight: var(--peso-semibold);
+  color: var(--cor-texto);
+  text-transform: uppercase;
+  font-size: var(--tamanho-texto-xs);
+  letter-spacing: 0.5px;
+  line-height: var(--altura-linha-compacta);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--cor-borda);
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.tabela td {
+  font-size: var(--tamanho-texto-base);
+  color: var(--cor-texto);
+  line-height: var(--altura-linha);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela tbody tr:hover {
+  background-color: rgba(76, 175, 80, 0.02);
+}
+
+.tabela tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+/* Células com ações */
+.tabela-acoes {
+  display: flex;
+  gap: var(--espacamento-xs);
+  align-items: center;
+}
+
+.tabela-acoes .botao {
+  padding: var(--espacamento-xs);
+  font-size: var(--tamanho-texto-sm);
+  min-height: auto;
+}
+
+/* Status na tabela */
+.status-ativo {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: var(--cor-sucesso);
+  padding: 4px var(--espacamento-xs);
+  border-radius: 4px;
+  font-size: var(--tamanho-texto-xs);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-inativo {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: var(--cor-texto-secundario);
+  padding: 4px var(--espacamento-xs);
+  border-radius: 4px;
+  font-size: var(--tamanho-texto-xs);
+  font-weight: var(--peso-medio);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

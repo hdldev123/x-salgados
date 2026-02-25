@@ -1,0 +1,17 @@
+[
+  { "id": 1, "nome": "Padaria Pão Quente", "email": "contato@paoquente.com", "telefone": "11987654321", "endereco": "Rua das Flores, 123, São Paulo, SP, 01000-001" },
+  { "id": 2, "nome": "Mercado Preço Bom", "email": "compras@precobom.com", "telefone": "21998877665", "endereco": "Avenida Central, 456, Rio de Janeiro, RJ, 02000-002" },
+  { "id": 3, "nome": "Lanchonete da Praça", "email": "lanchonete.praca@email.com", "telefone": "31988887777", "endereco": "Praça da Matriz, 789, Belo Horizonte, MG, 03000-003" },
+  { "id": 4, "nome": "Cafeteria Sabor & Cia", "email": "saborcia@cafe.com", "telefone": "41977665544", "endereco": "Alameda dos Anjos, 101, Curitiba, PR, 04000-004" },
+  { "id": 5, "nome": "Restaurante Tempero Caseiro", "email": "temperocaseiro@rest.com", "telefone": "51966554433", "endereco": "Rua do Sabor, 212, Porto Alegre, RS, 05000-005" },
+  { "id": 6, "nome": "Buffet Festas Alegria", "email": "festas@alegria.com", "telefone": "61955443322", "endereco": "Setor de Festas, Lote 3, Brasília, DF, 06000-006" },
+  { "id": 7, "nome": "Supermercado Economia Total", "email": "economia@super.com", "telefone": "71944332211", "endereco": "Avenida da Economia, 404, Salvador, BA, 07000-007" },
+  { "id": 8, "nome": "Cantina do Zé", "email": "cantina.ze@email.com", "telefone": "81933221100", "endereco": "Rua da Esquina, 505, Recife, PE, 08000-008" },
+  { "id": 9, "nome": "Empório Gourmet", "email": "emporio@gourmet.com", "telefone": "11922110099", "endereco": "Rua Faria Lima, 999, São Paulo, SP, 01000-001" },
+  { "id": 10, "nome": "Hotel Beira Mar", "email": "reservas@beiramar.com", "telefone": "21911009988", "endereco": "Avenida Atlântica, 777, Rio de Janeiro, RJ, 02000-002" },
+  { "id": 11, "nome": "Escola Aprender Mais", "email": "cantina@aprendermais.edu", "telefone": "31999998888", "endereco": "Rua dos Estudantes, 159, Belo Horizonte, MG, 03000-003" },
+  { "id": 12, "nome": "Clube Recreativo Sol Nascente", "email": "clube@solnascente.com", "telefone": "41988776655", "endereco": "Estrada do Sol, Km 5, Curitiba, PR, 04000-004" },
+  { "id": 13, "nome": "Hospital Vida & Saúde", "email": "nutricao@vidasaude.com", "telefone": "51977665544", "endereco": "Avenida da Saúde, 369, Porto Alegre, RS, 05000-005" },
+  { "id": 14, "nome": "Empresa Tech Solutions", "email": "compras@techsolutions.com", "telefone": "61966554433", "endereco": "Setor Comercial, Bloco A, Brasília, DF, 06000-006" },
+  { "id": 15, "nome": "Mini Mercado do Bairro", "email": "minibairro@email.com", "telefone": "71955443322", "endereco": "Travessa da Comunidade, 78, Salvador, BA, 07000-007" }
+]

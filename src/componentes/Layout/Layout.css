@@ -1,0 +1,29 @@
+.layout-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--cor-fundo);
+}
+
+.conteudo-principal {
+  flex: 1;
+  background-color: var(--cor-fundo);
+  padding: var(--espacamento-lg);
+  overflow-y: auto;
+}
+
+.conteudo-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Responsividade para o Layout */
+@media (max-width: 768px) {
+  .conteudo-principal {
+    padding: var(--espacamento-sm);
+  }
+  
+  .layout-container {
+    flex-direction: column;
+  }
+}
