@@ -1,944 +1,771 @@
-# Documentação Técnica — X Salgados API Backend
+# X Salgados — Documentação Técnica de Referência para Agente IA
 
-> **Classificação:** Documento Técnico de Nível Empresarial  
-> **Versão:** 1.0  
-> **Data:** 24/02/2026  
-> **Autor:** Engenharia de Software / AppSec  
-> **Stack:** .NET 8 · Entity Framework Core · PostgreSQL (Supabase) · JWT · Swagger/OpenAPI
+> **Última atualização:** 02/03/2026
+> **Stack atual:** Node.js · TypeScript · Express · Supabase (PostgREST) · Zod · JWT · React · Vite
+> **Propósito:** Documento de consulta rápida para agentes de IA auxiliarem no desenvolvimento, debugging e evolução do projeto.
 
 ---
 
-## Sumário
-
-1. [Visão Geral](#1-visão-geral)
-2. [Arquitetura e Fluxo](#2-arquitetura-e-fluxo)
-3. [Dicionário de Dados/API](#3-dicionário-de-dadosapi)
-4. [Análise de Segurança (Crítico)](#4-análise-de-segurança-crítico)
-5. [Guia de Implementação](#5-guia-de-implementação)
-6. [Casos de Teste](#6-casos-de-teste)
-
----
-
-## 1. Visão Geral
-
-### 1.1. Objetivo do Sistema
-
-O **X Salgados** é um sistema de gestão de pedidos para uma lanchonete, projetado para substituir processos manuais por um fluxo digital centralizado. A aplicação cobre todo o ciclo de vida operacional: cadastro de clientes e produtos, criação e acompanhamento de pedidos, controle de entregas e dashboard gerencial com KPIs.
-
-### 1.2. Problema que o Código Resolve
-
-| Problema                                    | Solução Implementada                                                         |
-| ------------------------------------------- | ---------------------------------------------------------------------------- |
-| Controle manual de pedidos (papel/planilha)  | CRUD completo de pedidos com cálculo automático de valores                   |
-| Falta de visibilidade sobre o negócio        | Dashboard com KPIs, gráficos de receita e distribuição de status             |
-| Rotas de entrega desorganizadas              | Endpoint inteligente que filtra pedidos prontos com entrega para o dia       |
-| Acesso indiscriminado a funcionalidades      | Sistema RBAC (Role-Based Access Control) com 3 perfis                       |
-| Inconsistência de preços em pedidos antigos  | Snapshot de preço unitário no momento da venda (`preco_unitario_snapshot`)    |
-
-### 1.3. Perfis de Usuário
-
-| Perfil           | Código Enum | Permissões Resumidas                                                 |
-| ---------------- | ----------- | -------------------------------------------------------------------- |
-| **Administrador** | `1`         | Acesso total: Dashboard, Pedidos, Clientes, Produtos, Usuários, Entregas |
-| **Atendente**     | `2`         | Pedidos e Clientes (CRUD), Produtos (somente leitura)                |
-| **Entregador**    | `3`         | Somente Rotas de Entrega                                            |
-
-### 1.4. Ciclo de Vida do Pedido
+## 1. MAPA DO PROJETO
 
 ```
-Pendente (1) → Em Produção (2) → Pronto (3) → Em Entrega (4) → Entregue (5)
-                                                                      ↑
-                                              Cancelado (6) ← (qualquer status)
-```
-
----
-
-## 2. Arquitetura e Fluxo
-
-### 2.1. Padrão Arquitetural
-
-A aplicação segue uma **arquitetura em camadas (Layered Architecture)** sobre o padrão ASP.NET Core MVC:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     CLIENTE (Frontend)                  │
-│              React · Vite · localhost:5173               │
-└─────────────────────┬───────────────────────────────────┘
-                      │ HTTP/HTTPS + JWT Bearer
-┌─────────────────────▼───────────────────────────────────┐
-│                MIDDLEWARE PIPELINE                       │
-│  ExceptionHandlingMiddleware → CORS → Auth → Routing    │
-├─────────────────────────────────────────────────────────┤
-│                  CONTROLLERS (API Layer)                 │
-│  AuthController · ClientesController · PedidosController│
-│  ProdutosController · UsuariosController                │
-│  DashboardController · EntregasController               │
-├─────────────────────────────────────────────────────────┤
-│                  SERVICES (Business Logic)               │
-│  AuthService · ClienteService · PedidoService           │
-│  ProdutoService · UsuarioService · DashboardService     │
-│  ↕ Interfaces (IoC/DI via Scoped)                       │
-├─────────────────────────────────────────────────────────┤
-│                  DATA ACCESS (EF Core)                   │
-│  AppDbContext · DbInitializer                           │
-│  Npgsql Provider → PostgreSQL (Supabase)                │
-└─────────────────────────────────────────────────────────┘
-```
-
-### 2.2. Fluxo de uma Requisição Autenticada (Step-by-step)
-
-1. **Cliente envia requisição** `POST /api/pedidos` com header `Authorization: Bearer <token>`.
-2. **ExceptionHandlingMiddleware** envelopa todo o pipeline em um `try/catch` global.
-3. **CORS Middleware** valida a origem contra a policy `AllowFrontend`.
-4. **JWT Bearer Middleware** decodifica o token, valida assinatura (HMAC-SHA256), issuer, audience e lifetime.
-5. **Authorization Middleware** verifica se a claim `Role` do token corresponde às roles exigidas pelo `[Authorize(Roles = "...")]` no controller.
-6. **Model Binding** desserializa o corpo JSON em `CriarPedidoDto` e executa validação via Data Annotations (`[Required]`, `[Range]`, etc.).
-7. **Controller** (`PedidosController.Criar`) invoca `IPedidoService.CriarAsync(dto)`.
-8. **Service** (`PedidoService`):
-   - Valida existência do cliente no banco.
-   - Busca produtos por IDs e valida se existem e estão ativos.
-   - **Calcula o valor total usando preços do banco** (nunca confia no valor do cliente).
-   - Persiste `Pedido` + `ItemPedido` com snapshot de preço.
-9. **EF Core** gera SQL parametrizado e executa contra o PostgreSQL via Npgsql.
-10. **Response** retorna `201 Created` com o pedido completo mapeado via DTO.
-11. Se **qualquer exceção** ocorrer, o `ExceptionHandlingMiddleware` captura, loga e retorna um `ApiResponse<object>` padronizado.
-
-### 2.3. Injeção de Dependência
-
-Todos os serviços são registrados como **Scoped** (um por requisição HTTP):
-
-```csharp
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
-builder.Services.AddScoped<IClienteService, ClienteService>();
-builder.Services.AddScoped<IProdutoService, ProdutoService>();
-builder.Services.AddScoped<IPedidoService, PedidoService>();
-builder.Services.AddScoped<IDashboardService, DashboardService>();
-```
-
-### 2.4. Modelo Relacional (Entidades)
-
-```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│   usuarios   │       │   clientes   │       │   produtos   │
-├──────────────┤       ├──────────────┤       ├──────────────┤
-│ id (PK)      │       │ id (PK)      │       │ id (PK)      │
-│ nome         │       │ nome         │       │ nome         │
-│ email (UQ)   │       │ telefone     │       │ categoria    │
-│ senha_hash   │       │ email        │       │ descricao    │
-│ perfil       │       │ endereco     │       │ preco        │
-│ data_criacao │       │ cidade       │       │ ativo        │
-│ ativo        │       │ cep          │       │ data_criacao │
-└──────────────┘       │ data_criacao │       └──────┬───────┘
-                       └──────┬───────┘              │
-                              │ 1:N                  │ 1:N
-                       ┌──────▼───────┐       ┌──────▼───────┐
-                       │   pedidos    │       │ itens_pedido │
-                       ├──────────────┤       ├──────────────┤
-                       │ id (PK)      │  1:N  │ id (PK)      │
-                       │ cliente_id(FK)├──────►│ pedido_id(FK)│
-                       │ data_criacao │       │ produto_id(FK)│
-                       │ data_entrega │       │ quantidade   │
-                       │ valor_total  │       │ preco_unit.. │
-                       │ status       │       └──────────────┘
-                       │ observacoes  │
-                       └──────────────┘
-```
-
-**Restrições de Integridade:**
-- `clientes → pedidos`: `ON DELETE RESTRICT` (não pode excluir cliente com pedidos)
-- `pedidos → itens_pedido`: `ON DELETE CASCADE` (excluir pedido remove seus itens)
-- `produtos → itens_pedido`: `ON DELETE RESTRICT` (não pode excluir produto vinculado)
-- `usuarios.email`: Índice `UNIQUE`
-
----
-
-## 3. Dicionário de Dados/API
-
-### 3.1. Endpoints da API
-
-#### 3.1.1. Autenticação (`AuthController`)
-
-| Método | Rota               | Acesso      | Descrição               | Request Body    | Response          |
-| ------ | ------------------ | ----------- | ----------------------- | --------------- | ----------------- |
-| POST   | `/api/auth/login`  | `Público`   | Autenticação via JWT    | `LoginDto`      | `LoginResponseDto` |
-
-**`LoginDto`**
-| Campo   | Tipo     | Obrigatório | Validação           |
-| ------- | -------- | ----------- | ------------------- |
-| `email` | `string` | Sim         | `[EmailAddress]`    |
-| `senha` | `string` | Sim         | `[Required]`        |
-
-**`LoginResponseDto`**
-| Campo      | Tipo               | Descrição                         |
-| ---------- | ------------------ | --------------------------------- |
-| `token`    | `string`           | JWT assinado (HMAC-SHA256)        |
-| `expiracao`| `DateTime`         | Data/hora de expiração (UTC+8h)   |
-| `usuario`  | `UsuarioLogadoDto` | Dados do usuário autenticado      |
-
----
-
-#### 3.1.2. Usuários (`UsuariosController`)
-
-| Método | Rota                         | Acesso | Descrição        | Body                | Response       |
-| ------ | ---------------------------- | ------ | ---------------- | ------------------- | -------------- |
-| GET    | `/api/usuarios`              | Admin  | Listar (paginado)| Query: `PaginacaoDto` | `ResultadoPaginadoDto<UsuarioDto>` |
-| GET    | `/api/usuarios/{id}`         | Admin  | Buscar por ID    | —                   | `UsuarioDto`   |
-| POST   | `/api/usuarios`              | Admin  | Criar            | `CriarUsuarioDto`   | `UsuarioDto`   |
-| PUT    | `/api/usuarios/{id}`         | Admin  | Atualizar        | `AtualizarUsuarioDto`| `UsuarioDto`  |
-| DELETE | `/api/usuarios/{id}`         | Admin  | Excluir          | —                   | `204 NoContent`|
-| PATCH  | `/api/usuarios/{id}/senha`   | Admin  | Alterar senha    | `AlterarSenhaDto`   | `{ sucesso, mensagem }` |
-
-**`CriarUsuarioDto`**
-| Campo   | Tipo            | Obrigatório | Validação                    |
-| ------- | --------------- | ----------- | ---------------------------- |
-| `nome`  | `string`        | Sim         | MaxLength(100)               |
-| `email` | `string`        | Sim         | EmailAddress, MaxLength(150) |
-| `senha` | `string`        | Sim         | MinLength(6)                 |
-| `perfil`| `PerfilUsuario` | Sim         | Enum (1, 2, 3)              |
-
-**`AlterarSenhaDto`**
-| Campo        | Tipo     | Obrigatório | Validação      |
-| ------------ | -------- | ----------- | -------------- |
-| `senhaAtual` | `string` | Sim         | `[Required]`   |
-| `novaSenha`  | `string` | Sim         | MinLength(6)   |
-
-**Regras de Negócio:**
-- Usuário não pode excluir a si mesmo (verificação via `ClaimTypes.NameIdentifier`).
-- Alteração de senha exige validação da senha atual.
-
----
-
-#### 3.1.3. Clientes (`ClientesController`)
-
-| Método | Rota                    | Acesso           | Descrição           | Body                  | Response      |
-| ------ | ----------------------- | ---------------- | ------------------- | --------------------- | ------------- |
-| GET    | `/api/clientes`         | Admin, Atendente | Listar (paginado)   | Query: `PaginacaoDto`, `busca` | `ResultadoPaginadoDto<ClienteDto>` |
-| GET    | `/api/clientes/{id}`    | Admin, Atendente | Buscar por ID       | —                     | `ClienteDto`  |
-| POST   | `/api/clientes`         | Admin, Atendente | Criar               | `CriarClienteDto`    | `ClienteDto`  |
-| PUT    | `/api/clientes/{id}`    | Admin, Atendente | Atualizar           | `AtualizarClienteDto`| `ClienteDto`  |
-| DELETE | `/api/clientes/{id}`    | Admin, Atendente | Excluir             | —                     | `204 NoContent` |
-
-**`CriarClienteDto` / `AtualizarClienteDto`**
-| Campo      | Tipo     | Obrigatório | Validação         |
-| ---------- | -------- | ----------- | ----------------- |
-| `nome`     | `string` | Sim         | MaxLength(100)    |
-| `telefone` | `string` | Sim         | MaxLength(20)     |
-| `email`    | `string?`| Não         | EmailAddress, MaxLength(150) |
-| `endereco` | `string?`| Não         | MaxLength(255)    |
-| `cidade`   | `string?`| Não         | MaxLength(100)    |
-| `cep`      | `string?`| Não         | MaxLength(10)     |
-
-**Regras de Negócio:**
-- Exclusão retorna `409 Conflict` se o cliente possuir pedidos vinculados.
-- Busca faz filtro case-insensitive por nome, telefone ou email.
-
----
-
-#### 3.1.4. Produtos (`ProdutosController`)
-
-| Método | Rota                        | Acesso       | Descrição              | Body               | Response      |
-| ------ | --------------------------- | ------------ | ---------------------- | ------------------- | ------------- |
-| GET    | `/api/produtos`             | Autenticado  | Listar (paginado)      | Query: `PaginacaoDto`, `categoria`, `apenasAtivos` | `ResultadoPaginadoDto<ProdutoDto>` |
-| GET    | `/api/produtos/{id}`        | Autenticado  | Buscar por ID          | —                   | `ProdutoDto`  |
-| GET    | `/api/produtos/categorias`  | Autenticado  | Listar categorias      | —                   | `List<string>`|
-| POST   | `/api/produtos`             | Admin        | Criar                  | `CriarProdutoDto`   | `ProdutoDto`  |
-| PUT    | `/api/produtos/{id}`        | Admin        | Atualizar              | `AtualizarProdutoDto`| `ProdutoDto` |
-| DELETE | `/api/produtos/{id}`        | Admin        | Excluir                | —                   | `204 NoContent`|
-
-**`CriarProdutoDto` / `AtualizarProdutoDto`**
-| Campo       | Tipo      | Obrigatório | Validação                           |
-| ----------- | --------- | ----------- | ----------------------------------- |
-| `nome`      | `string`  | Sim         | MaxLength(100)                      |
-| `categoria` | `string`  | Sim         | MaxLength(50)                       |
-| `descricao` | `string?` | Não         | MaxLength(500)                      |
-| `preco`     | `decimal`  | Sim         | Range(0.01, 99999.99)               |
-| `ativo`     | `bool`     | Não         | Default: `true`                     |
-
----
-
-#### 3.1.5. Pedidos (`PedidosController`)
-
-| Método | Rota                          | Acesso           | Descrição              | Body                | Response      |
-| ------ | ----------------------------- | ---------------- | ---------------------- | ------------------- | ------------- |
-| GET    | `/api/pedidos`                | Admin, Atendente | Listar (paginado)      | Query: `PaginacaoDto`, `status`, `dataInicio`, `dataFim` | `ResultadoPaginadoDto<PedidoResumoDto>` |
-| GET    | `/api/pedidos/{id}`           | Admin, Atendente | Buscar por ID          | —                   | `PedidoDto`   |
-| POST   | `/api/pedidos`                | Admin, Atendente | Criar                  | `CriarPedidoDto`    | `PedidoDto`   |
-| PATCH  | `/api/pedidos/{id}/status`    | Admin, Atendente | Atualizar status       | `AtualizarStatusDto`| `PedidoDto`   |
-
-**`CriarPedidoDto`**
-| Campo        | Tipo               | Obrigatório | Validação                  |
-| ------------ | ------------------ | ----------- | -------------------------- |
-| `clienteId`  | `int`              | Sim         | `[Required]`               |
-| `dataEntrega`| `DateTime?`        | Não         | —                          |
-| `observacoes`| `string?`          | Não         | MaxLength(500)             |
-| `itens`      | `List<ItemPedidoDto>` | Sim      | MinLength(1)               |
-
-**`ItemPedidoDto`**
-| Campo       | Tipo  | Obrigatório | Validação               |
-| ----------- | ----- | ----------- | ----------------------- |
-| `produtoId` | `int` | Sim         | `[Required]`            |
-| `quantidade`| `int` | Sim         | Range(1, 9999)          |
-
-**Regras de Negócio Críticas:**
-- O valor total do pedido é **calculado exclusivamente pelo backend** usando preços do banco de dados.
-- O preço unitário é salvo como **snapshot** (`preco_unitario_snapshot`) para preservar o valor histórico.
-- Produtos inativos **não podem** ser adicionados a pedidos.
-- Quando o status muda para `Entregue`, a `data_entrega` é preenchida automaticamente com `DateTime.UtcNow`.
-
----
-
-#### 3.1.6. Entregas (`EntregasController`)
-
-| Método | Rota                 | Acesso              | Descrição              | Response            |
-| ------ | -------------------- | ------------------- | ---------------------- | ------------------- |
-| GET    | `/api/entregas/rotas`| Admin, Entregador   | Rotas de entrega do dia| `List<PedidoDto>`   |
-
-**Lógica de Filtro:**
-- Retorna somente pedidos com `Status = Pronto` ou `Status = EmEntrega`.
-- A `DataEntrega` deve estar dentro do dia atual (UTC).
-- Ordenado por `DataEntrega` ascendente.
-
----
-
-#### 3.1.7. Dashboard (`DashboardController`)
-
-| Método | Rota                                | Acesso | Response                  |
-| ------ | ----------------------------------- | ------ | ------------------------- |
-| GET    | `/api/dashboard/kpis`               | Admin  | `DashboardKpisDto`        |
-| GET    | `/api/dashboard/pedidos-por-mes`    | Admin  | `List<PedidosPorMesDto>`  |
-| GET    | `/api/dashboard/distribuicao-status`| Admin  | `List<DistribuicaoStatusDto>` |
-| GET    | `/api/dashboard/completo`           | Admin  | `DashboardCompletoDto`    |
-
-**`DashboardKpisDto`**
-| Campo              | Tipo      | Descrição                                    |
-| ------------------ | --------- | -------------------------------------------- |
-| `receitaTotal`     | `decimal` | Soma dos pedidos com status `Entregue`       |
-| `totalPedidos`     | `int`     | Total geral de pedidos                       |
-| `totalClientes`    | `int`     | Total de clientes cadastrados                |
-| `pedidosPendentes` | `int`     | Pendente + EmProducao + Pronto               |
-| `pedidosHoje`      | `int`     | Pedidos criados no dia atual                 |
-| `receitaHoje`      | `decimal` | Receita de pedidos entregues hoje            |
-
----
-
-### 3.2. DTOs Comuns
-
-#### `PaginacaoDto`
-| Campo          | Tipo  | Default | Limites         |
-| -------------- | ----- | ------- | --------------- |
-| `pagina`       | `int` | `1`     | Mín: 1          |
-| `tamanhoPagina`| `int` | `10`    | Mín: 1, Máx: 100 |
-
-#### `ResultadoPaginadoDto<T>`
-| Campo          | Tipo     | Descrição                            |
-| -------------- | -------- | ------------------------------------ |
-| `dados`        | `List<T>`| Itens da página atual                |
-| `paginaAtual`  | `int`    | Página corrente                      |
-| `tamanhoPagina`| `int`    | Tamanho da página                    |
-| `totalItens`   | `int`    | Total de registros                   |
-| `totalPaginas` | `int`    | Total de páginas                     |
-| `temProxima`   | `bool`   | Se existe próxima página             |
-| `temAnterior`  | `bool`   | Se existe página anterior            |
-
----
-
-## 4. Análise de Segurança (Crítico)
-
-### 4.1. Vulnerabilidades Identificadas
-
-#### **CRÍTICO — Hashing de Senha com SHA256 (SEM SALT)**
-
-**Arquivo:** `Backend/Services/AuthService.cs` (linhas 51-55)
-
-```csharp
-public string HashSenha(string senha)
-{
-    using var sha256 = SHA256.Create();
-    var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(senha));
-    return Convert.ToBase64String(bytes);
-}
-```
-
-**Risco:** SHA256 é um hash criptográfico de propósito geral, **não é uma função de hashing de senhas**. Problemas:
-1. **Sem salt** — senhas iguais produzem o mesmo hash, vulnerável a ataques de rainbow table.
-2. **Extremamente rápido** — GPUs modernas computam bilhões de SHA256/s, facilitando força bruta.
-3. **Sem fator de trabalho ajustável** — não há mecanismo para aumentar o custo computacional.
-
-**Impacto:** Se o banco de dados for comprometido, **todas as senhas podem ser recuperadas em minutos** usando tabelas pré-computadas ou ataques de dicionário.
-
-**Correção Obrigatória:**
-```csharp
-using BCrypt.Net;
-
-public string HashSenha(string senha)
-{
-    return BCrypt.Net.BCrypt.HashPassword(senha, workFactor: 12);
-}
-
-public bool VerificarSenha(string senha, string hash)
-{
-    return BCrypt.Net.BCrypt.Verify(senha, hash);
-}
-```
-
-**Alternativa:** Usar `Argon2id` (via `Konscious.Security.Cryptography`) ou `PBKDF2` (nativo no .NET via `Rfc2898DeriveBytes`).
-
-**Pacote NuGet:** `BCrypt.Net-Next`
-
----
-
-#### **ALTO — Chave JWT Hardcoded como Fallback**
-
-**Arquivo:** `Backend/Program.cs` (linha 22) e `Backend/Services/AuthService.cs` (linha 63)
-
-```csharp
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "ChaveSecretaPadraoParaDesenvolvimento123456789";
-```
-
-**Risco:** Se `Jwt:Key` não for configurada no `appsettings.json` ou variável de ambiente, a aplicação usa uma chave hardcoded **previsível**. Um atacante que conheça o código-fonte pode forjar tokens JWT válidos.
-
-**Correção:**
-```csharp
-var jwtKey = builder.Configuration["Jwt:Key"] 
-    ?? throw new InvalidOperationException(
-        "FATAL: A chave JWT não foi configurada. Defina 'Jwt:Key' no appsettings ou variável de ambiente.");
+xsalgados/
+├── DOCUMENTACAO_TECNICA.md      ← ESTE ARQUIVO (referência técnica para IA)
+├── DOCUMENTACAO_NEGOCIO.md      ← Documento de negócio (apresentação para banca)
+├── README.md                    ← Instruções de setup
+│
+├── backend/                     ← API REST (Node.js + TypeScript + Express)
+│   ├── package.json             ← Dependências e scripts npm
+│   ├── tsconfig.json            ← Config TypeScript (ES2020, commonjs, strict)
+│   ├── create_tables.sql        ← DDL do banco PostgreSQL
+│   └── src/
+│       ├── server.ts            ← Entry point Express (porta 3000)
+│       ├── seed.ts              ← Script de seed (cria admin com bcrypt)
+│       ├── config/
+│       │   ├── database.ts      ← Cliente Supabase (PostgREST)
+│       │   └── swagger.ts       ← Spec OpenAPI gerada via zod-to-json-schema
+│       ├── models/              ← Interfaces TypeScript (= colunas do banco, snake_case)
+│       │   ├── enums.ts         ← PerfilUsuario (1-3), StatusPedido (1-6) + labels
+│       │   ├── Usuario.ts       ← { id, nome, email, senha_hash, perfil, data_criacao, ativo }
+│       │   ├── Cliente.ts       ← { id, nome, telefone, email?, endereco?, cidade?, cep?, data_criacao }
+│       │   ├── Produto.ts       ← { id, nome, categoria, descricao?, preco, ativo, data_criacao }
+│       │   ├── Pedido.ts        ← { id, cliente_id, data_criacao, data_entrega?, valor_total, status, observacoes? }
+│       │   └── ItemPedido.ts    ← { id, pedido_id, produto_id, quantidade, preco_unitario_snapshot }
+│       ├── dtos/                ← Schemas Zod (input) + interfaces TypeScript (output)
+│       │   ├── auth.dto.ts      ← LoginSchema → LoginResponseDto
+│       │   ├── common.dto.ts    ← PaginacaoSchema, ResultadoPaginadoDto<T>, ApiResponse<T>
+│       │   ├── cliente.dto.ts   ← CriarClienteSchema, ClienteDto
+│       │   ├── produto.dto.ts   ← CriarProdutoSchema, ProdutoDto
+│       │   ├── pedido.dto.ts    ← CriarPedidoSchema, AtualizarStatusSchema, PedidoDto, PedidoResumoDto
+│       │   ├── usuario.dto.ts   ← CriarUsuarioSchema, AtualizarUsuarioSchema, AlterarSenhaSchema, UsuarioDto
+│       │   └── dashboard.dto.ts ← DashboardKpisDto, PedidosPorMesDto, DistribuicaoStatusDto
+│       ├── middlewares/
+│       │   ├── auth.middleware.ts    ← authenticate() + authorize(...perfis) → RBAC
+│       │   ├── validate.middleware.ts ← validate(zodSchema, source) → req.body/query/params
+│       │   └── error.middleware.ts   ← errorHandler + classes de erro tipadas (NotFoundError, etc.)
+│       ├── services/            ← Toda a lógica de negócio
+│       │   ├── auth.service.ts      ← Login (bcrypt + JWT)
+│       │   ├── cliente.service.ts   ← CRUD + busca + proteção referencial
+│       │   ├── produto.service.ts   ← CRUD + categorias + filtros
+│       │   ├── pedido.service.ts    ← CRUD + cálculo de valor + snapshot de preço + rotas de entrega
+│       │   ├── usuario.service.ts   ← CRUD + email único + auto-exclusão + alteração de senha
+│       │   └── dashboard.service.ts ← KPIs + pedidos-por-mês + distribuição de status
+│       ├── controllers/         ← Handlers HTTP (thin — delegam para services)
+│       │   ├── auth.controller.ts
+│       │   ├── clientes.controller.ts
+│       │   ├── produtos.controller.ts
+│       │   ├── pedidos.controller.ts
+│       │   ├── usuarios.controller.ts
+│       │   ├── entregas.controller.ts
+│       │   └── dashboard.controller.ts
+│       └── routes/
+│           └── index.ts         ← Todas as rotas com middlewares encadeados
+│
+└── frontend/                    ← SPA React (JavaScript puro, sem TypeScript)
+    ├── package.json             ← React 18, Vite 5, Axios, Recharts, React Router 6
+    ├── vite.config.js           ← Dev server porta 5173
+    └── src/
+        ├── main.jsx             ← BrowserRouter + App
+        ├── App.jsx              ← ProvedorAutenticacao > ProviderPedidos > RotasApp
+        ├── componentes/         ← Componentes reutilizáveis
+        │   ├── BarraLateral/    ← Menu lateral com filtro por role
+        │   ├── Layout/          ← BarraLateral + Outlet
+        │   ├── Modal/           ← Portal React com backdrop
+        │   ├── Spinner/         ← Indicador de carregamento
+        │   └── Tabela/          ← Tabela genérica (colunas + dados)
+        ├── contextos/
+        │   ├── ContextoAutenticacao.jsx ← Login/logout, token em localStorage
+        │   └── ContextoPedidos.jsx      ← useReducer para pedidos + selectors por status
+        ├── paginas/
+        │   ├── Login/           ← Formulário de login
+        │   ├── Dashboard/       ← KPIs + gráfico de vendas (Recharts LineChart)
+        │   ├── Pedidos/         ← Listagem tabela/Kanban + atualização de status
+        │   ├── Clientes/        ← CRUD completo com modal de formulário
+        │   ├── Produtos/        ← CRUD completo com modal de formulário
+        │   ├── Usuarios/        ← Listagem somente leitura (sem CRUD no frontend)
+        │   ├── RotasDeEntregas/ ← Agrupamento automático de pedidos em rotas
+        │   └── NaoEncontrado/   ← Página 404
+        ├── rotas/
+        │   ├── index.jsx        ← Definição de rotas com roles permitidas
+        │   └── RotaProtegida.jsx ← Guard de autenticação + autorização
+        ├── servicos/            ← Chamadas HTTP via Axios
+        │   ├── api.js           ← Instância Axios (base, interceptors, auto-logout 401)
+        │   ├── apiAutenticacao.js
+        │   ├── apiPedidos.js
+        │   ├── apiClientes.js
+        │   ├── apiProdutos.js
+        │   ├── apiUsuarios.js
+        │   ├── apiDashboard.js
+        │   └── apiEntregas.js
+        ├── utils/
+        │   └── mapeamentos.js   ← Conversores backend ↔ frontend (status, perfis, objetos)
+        └── types/
+            └── index.js         ← Typedefs JSDoc (sem runtime)
 ```
 
 ---
 
-#### **ALTO — Token JWT com Vida Longa (8 horas)**
+## 2. STACK TECNOLÓGICA
 
-**Arquivo:** `Backend/Services/AuthService.cs` (linha 79)
+### Backend
 
-```csharp
-expires: DateTime.UtcNow.AddHours(8),
-```
+| Tecnologia | Versão | Finalidade |
+|---|---|---|
+| Node.js | 18+ | Runtime |
+| TypeScript | 5.7.3 | Tipagem estática |
+| Express | 4.21.2 | Framework HTTP |
+| @supabase/supabase-js | 2.98.0 | Acesso ao banco via PostgREST API |
+| Zod | 3.24.2 | Validação de input + inferência de tipos |
+| bcrypt | 5.1.1 | Hash de senhas (12 rounds) |
+| jsonwebtoken | 9.0.2 | Geração e verificação de JWT (HMAC-SHA256) |
+| swagger-ui-express | 5.0.1 | Documentação OpenAPI interativa |
+| zod-to-json-schema | 3.25.1 | Geração automática de JSON Schema a partir do Zod |
+| tsx | 4.21.0 | Execução direta de TypeScript em dev |
+| dotenv | 16.4.7 | Variáveis de ambiente |
 
-**Risco:** Se um token for interceptado (ex: via XSS no frontend), o atacante tem 8 horas de acesso. Não há mecanismo de **refresh token** nem de **revogação de tokens**.
+### Frontend
 
-**Correções Recomendadas:**
-1. Reduzir o tempo de expiração para **15-30 minutos**.
-2. Implementar **Refresh Tokens** armazenados no banco com rotação automática.
-3. Implementar uma **blacklist de tokens** para revogação imediata (ex: logout, troca de senha).
+| Tecnologia | Versão | Finalidade |
+|---|---|---|
+| React | 18.2.0 | UI framework |
+| Vite | 5.2.0 | Build tool + dev server |
+| React Router DOM | 6.22.3 | Roteamento SPA |
+| Axios | 1.13.5 | HTTP client |
+| Recharts | 2.12.3 | Gráficos (Dashboard) |
+| React Icons | 5.0.1 | Ícones (Feather Icons + FontAwesome) |
+| CSS puro | — | Estilização (sem Tailwind/CSS-in-JS por design) |
 
----
+### Infraestrutura
 
-#### **ALTO — Ausência de Rate Limiting no Endpoint de Login**
-
-**Arquivo:** `Backend/Controllers/AuthController.cs`
-
-**Risco:** O endpoint `POST /api/auth/login` não possui limitação de taxa de requisições. Isto permite:
-- **Ataques de força bruta** contra senhas.
-- **Enumeração de usuários** (timing attacks na resposta).
-
-**Correção:**
-```csharp
-// Em Program.cs
-builder.Services.AddRateLimiter(options =>
-{
-    options.AddFixedWindowLimiter("login", opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.QueueLimit = 0;
-    });
-});
-
-// No controller
-[HttpPost("login")]
-[EnableRateLimiting("login")]
-[AllowAnonymous]
-public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto dto)
-```
+| Componente | Tecnologia |
+|---|---|
+| Banco de dados | PostgreSQL hospedado no Supabase |
+| Acesso ao banco | PostgREST API via @supabase/supabase-js (service_role key) |
+| Autenticação | JWT customizado (não usa Supabase Auth) |
 
 ---
 
-#### **MÉDIO — RequireHttpsMetadata Desabilitado**
+## 3. BANCO DE DADOS
 
-**Arquivo:** `Backend/Program.cs` (linha 31)
+### 3.1 Modelo Relacional
 
-```csharp
-options.RequireHttpsMetadata = false;
+```
+usuarios (id PK, nome, email UQ, senha_hash, perfil INT, data_criacao, ativo BOOL)
+    │
+    │ (sem FK direta — auth é via JWT)
+    │
+clientes (id PK, nome, telefone, email?, endereco?, cidade?, cep?, data_criacao)
+    │ 1:N
+    ▼
+pedidos (id PK, cliente_id FK→clientes ON DELETE RESTRICT, data_criacao, data_entrega?,
+         valor_total DECIMAL(10,2), status INT, observacoes?)
+    │ 1:N
+    ▼
+itens_pedido (id PK, pedido_id FK→pedidos ON DELETE CASCADE,
+              produto_id FK→produtos ON DELETE RESTRICT,
+              quantidade INT, preco_unitario_snapshot DECIMAL(10,2))
+    ▲
+    │ 1:N
+produtos (id PK, nome, categoria, descricao?, preco DECIMAL(10,2), ativo BOOL, data_criacao)
 ```
 
-**Risco:** A validação de metadados HTTPS do provedor JWT está desativada. Em produção, isso pode permitir ataques MITM na cadeia de configuração JWT.
+### 3.2 Enums (numéricos no banco)
 
-**Correção:**
-```csharp
-options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+**PerfilUsuario:**
+| Valor | Label |
+|---|---|
+| 1 | Administrador |
+| 2 | Atendente |
+| 3 | Entregador |
+
+**StatusPedido:**
+| Valor | Label |
+|---|---|
+| 1 | Pendente |
+| 2 | Em Produção |
+| 3 | Pronto |
+| 4 | Em Entrega |
+| 5 | Entregue |
+| 6 | Cancelado |
+
+### 3.3 Índices
+
+```sql
+idx_pedidos_cliente_id     ON pedidos(cliente_id)
+idx_pedidos_status         ON pedidos(status)
+idx_pedidos_data_criacao   ON pedidos(data_criacao)
+idx_pedidos_data_entrega   ON pedidos(data_entrega)
+idx_itens_pedido_pedido_id ON itens_pedido(pedido_id)
+idx_itens_pedido_produto_id ON itens_pedido(produto_id)
+idx_produtos_categoria     ON produtos(categoria)
+idx_usuarios_email         ON usuarios(email)
+```
+
+### 3.4 Restrições de Integridade
+
+| FK | ON DELETE |
+|---|---|
+| pedidos.cliente_id → clientes.id | RESTRICT (não pode excluir cliente com pedidos) |
+| itens_pedido.pedido_id → pedidos.id | CASCADE (exclui itens junto com pedido) |
+| itens_pedido.produto_id → produtos.id | RESTRICT (não pode excluir produto vinculado) |
+
+---
+
+## 4. API — ENDPOINTS COMPLETOS
+
+**Base URL:** `http://localhost:3000`
+**Formato:** JSON
+**Auth:** `Authorization: Bearer <JWT>`
+**Resposta padrão:** `{ sucesso: boolean, mensagem?: string, dados?: T, erros?: string[] }`
+
+### 4.1 Autenticação
+
+| Método | Rota | Acesso | Body | Response |
+|---|---|---|---|---|
+| POST | `/api/auth/login` | Público | `{ email, senha }` | `{ token, expiracao, usuario: { id, nome, email, perfil } }` |
+
+### 4.2 Clientes
+
+| Método | Rota | Acesso | Body/Query | Response |
+|---|---|---|---|---|
+| GET | `/api/clientes` | Admin, Atendente | Query: `pagina, tamanhoPagina, busca` | `ResultadoPaginado<ClienteDto>` |
+| GET | `/api/clientes/:id` | Admin, Atendente | — | `ClienteDto` |
+| POST | `/api/clientes` | Admin, Atendente | `{ nome, telefone, email?, endereco?, cidade?, cep? }` | `ClienteDto` (201) |
+| PUT | `/api/clientes/:id` | Admin, Atendente | `{ nome, telefone, email?, endereco?, cidade?, cep? }` | `ClienteDto` |
+| DELETE | `/api/clientes/:id` | Admin, Atendente | — | 204 ou 409 (se tiver pedidos) |
+
+### 4.3 Produtos
+
+| Método | Rota | Acesso | Body/Query | Response |
+|---|---|---|---|---|
+| GET | `/api/produtos` | Autenticado | Query: `pagina, tamanhoPagina, categoria, apenasAtivos` | `ResultadoPaginado<ProdutoDto>` |
+| GET | `/api/produtos/categorias` | Autenticado | — | `string[]` |
+| GET | `/api/produtos/:id` | Autenticado | — | `ProdutoDto` |
+| POST | `/api/produtos` | Admin | `{ nome, categoria, descricao?, preco, ativo? }` | `ProdutoDto` (201) |
+| PUT | `/api/produtos/:id` | Admin | `{ nome, categoria, descricao?, preco, ativo? }` | `ProdutoDto` |
+| DELETE | `/api/produtos/:id` | Admin | — | 204 |
+
+### 4.4 Pedidos
+
+| Método | Rota | Acesso | Body/Query | Response |
+|---|---|---|---|---|
+| GET | `/api/pedidos` | Admin, Atendente | Query: `pagina, tamanhoPagina, status, dataInicio, dataFim` | `ResultadoPaginado<PedidoResumoDto>` |
+| GET | `/api/pedidos/:id` | Admin, Atendente | — | `PedidoDto` (com itens + cliente) |
+| POST | `/api/pedidos` | Admin, Atendente | `{ clienteId, dataEntrega?, observacoes?, itens: [{ produtoId, quantidade }] }` | `PedidoDto` (201) |
+| PATCH | `/api/pedidos/:id/status` | Admin, Atendente | `{ status: number }` | `PedidoDto` |
+
+### 4.5 Usuários
+
+| Método | Rota | Acesso | Body/Query | Response |
+|---|---|---|---|---|
+| GET | `/api/usuarios` | Admin | Query: `pagina, tamanhoPagina` | `ResultadoPaginado<UsuarioDto>` |
+| GET | `/api/usuarios/:id` | Admin | — | `UsuarioDto` |
+| POST | `/api/usuarios` | Admin | `{ nome, email, senha, perfil: 1\|2\|3 }` | `UsuarioDto` (201) |
+| PUT | `/api/usuarios/:id` | Admin | `{ nome, email, perfil, ativo }` | `UsuarioDto` |
+| DELETE | `/api/usuarios/:id` | Admin | — | 204 (não pode excluir a si mesmo) |
+| PATCH | `/api/usuarios/:id/senha` | Admin | `{ senhaAtual, novaSenha }` | `{ sucesso, mensagem }` |
+
+### 4.6 Entregas
+
+| Método | Rota | Acesso | Response |
+|---|---|---|---|
+| GET | `/api/entregas/rotas` | Admin, Entregador | `PedidoDto[]` (status Pronto/EmEntrega, data_entrega = hoje) |
+
+### 4.7 Dashboard
+
+| Método | Rota | Acesso | Response |
+|---|---|---|---|
+| GET | `/api/dashboard/kpis` | Admin | `{ receitaTotal, totalPedidos, totalClientes, pedidosPendentes, pedidosHoje, receitaHoje }` |
+| GET | `/api/dashboard/pedidos-por-mes` | Admin | `[{ ano, mes, mesNome, totalPedidos, receitaTotal }]` |
+| GET | `/api/dashboard/distribuicao-status` | Admin | `[{ status, quantidade, percentual }]` |
+| GET | `/api/dashboard/completo` | Admin | `{ kpis, pedidosPorMes, distribuicaoStatus }` |
+
+---
+
+## 5. SCHEMAS DE VALIDAÇÃO (ZOD)
+
+Todos os schemas estão em `backend/src/dtos/`. O middleware `validate(schema, source)` aplica automaticamente.
+
+### LoginSchema
+```typescript
+{ email: z.string().email(), senha: z.string().min(1) }
+```
+
+### PaginacaoSchema
+```typescript
+{ pagina: z.coerce.number().int().min(1).default(1),
+  tamanhoPagina: z.coerce.number().int().min(1).max(100).default(10) }.passthrough()
+```
+
+### CriarClienteSchema
+```typescript
+{ nome: z.string().min(1).max(100),
+  telefone: z.string().min(1).max(20),
+  email: z.string().email().max(150).nullish(),
+  endereco: z.string().max(255).nullish(),
+  cidade: z.string().max(100).nullish(),
+  cep: z.string().max(10).nullish() }
+```
+
+### CriarProdutoSchema
+```typescript
+{ nome: z.string().min(1).max(100),
+  categoria: z.string().min(1).max(50),
+  descricao: z.string().max(500).nullish(),
+  preco: z.number().min(0.01).max(99999.99),
+  ativo: z.boolean().default(true) }
+```
+
+### CriarPedidoSchema
+```typescript
+{ clienteId: z.number().int(),
+  dataEntrega: z.coerce.date().nullish(),
+  observacoes: z.string().max(500).nullish(),
+  itens: z.array({ produtoId: z.number().int(),
+                    quantidade: z.number().int().min(1).max(9999) }).min(1) }
+```
+
+### AtualizarStatusSchema
+```typescript
+{ status: z.nativeEnum(StatusPedido) }
+```
+
+### CriarUsuarioSchema
+```typescript
+{ nome: z.string().min(1).max(100),
+  email: z.string().email().max(150),
+  senha: z.string().min(6),
+  perfil: z.nativeEnum(PerfilUsuario) }
+```
+
+### AtualizarUsuarioSchema
+```typescript
+{ nome: z.string().min(1).max(100),
+  email: z.string().email().max(150),
+  perfil: z.nativeEnum(PerfilUsuario),
+  ativo: z.boolean().default(true) }
+```
+
+### AlterarSenhaSchema
+```typescript
+{ senhaAtual: z.string().min(1), novaSenha: z.string().min(6) }
 ```
 
 ---
 
-#### **MÉDIO — Dados Sensíveis no appsettings.json**
+## 6. REGRAS DE NEGÓCIO IMPLEMENTADAS
 
-**Arquivo:** `Backend/appsettings.json`
+### 6.1 Pedidos
 
-O arquivo `appsettings.json` contém placeholders que podem ser acidentalmente preenchidos com dados reais e commitados:
-```json
-"DefaultConnection": "Host=SEU_HOST.pooler.supabase.com;..."
-"Key": "SUA_CHAVE_JWT_COM_NO_MINIMO_32_CARACTERES_AQUI"
-```
+| Regra | Implementação | Arquivo |
+|---|---|---|
+| Valor total calculado pelo backend | Busca preços do banco, nunca aceita valor do cliente | pedido.service.ts → `criarAsync()` |
+| Snapshot de preço | `preco_unitario_snapshot` salvo no momento da criação | pedido.service.ts → `criarAsync()` |
+| Produtos inativos bloqueados | Verifica `ativo === true` antes de aceitar item | pedido.service.ts → `criarAsync()` |
+| Data entrega automática | Quando status → Entregue, preenche `data_entrega = now()` | pedido.service.ts → `atualizarStatusAsync()` |
+| Criação em 2 passos | Insert pedido → insert itens. Rollback manual do pedido se itens falharem | pedido.service.ts → `criarAsync()` |
 
-**Correção:** Em produção, **todas** as configurações sensíveis devem ser injetadas via:
-- Variáveis de ambiente
-- Azure Key Vault / AWS Secrets Manager
-- User Secrets (desenvolvimento)
+### 6.2 Clientes
 
----
+| Regra | Implementação |
+|---|---|
+| Exclusão protegida | Verifica se há pedidos vinculados antes de excluir (retorna 409) |
+| Busca textual | ilike em nome, telefone e email |
 
-#### **MÉDIO — Ausência de Validação de Transição de Status de Pedido**
+### 6.3 Usuários
 
-**Arquivo:** `Backend/Services/PedidoService.cs` — método `AtualizarStatusAsync`
+| Regra | Implementação |
+|---|---|
+| Email único | Validação explícita no service + constraint UNIQUE no banco |
+| Auto-exclusão bloqueada | Compara id do request com id do JWT. Lança InvalidOperationError |
+| Alteração de senha | Exige `senhaAtual` válida (bcrypt.compare) |
 
-```csharp
-public async Task<PedidoDto?> AtualizarStatusAsync(int id, AtualizarStatusDto dto)
-{
-    var pedido = await _context.Pedidos.FindAsync(id);
-    if (pedido == null) return null;
-    pedido.Status = dto.Status; // Aceita QUALQUER transição
-    ...
-}
-```
+### 6.4 Entregas
 
-**Risco:** Não há validação de máquina de estados. Um pedido `Entregue` pode voltar para `Pendente`, ou um pedido `Cancelado` pode ser reaberto. Isso viola a integridade do fluxo de negócio.
+| Regra | Implementação |
+|---|---|
+| Rotas do dia | Filtra pedidos com status Pronto(3) ou EmEntrega(4), data_entrega dentro de hoje (UTC) |
+| Ordenação | Por data_entrega ascendente |
 
-**Correção:**
-```csharp
-private static readonly Dictionary<StatusPedido, StatusPedido[]> TransicoesPermitidas = new()
-{
-    { StatusPedido.Pendente, new[] { StatusPedido.EmProducao, StatusPedido.Cancelado } },
-    { StatusPedido.EmProducao, new[] { StatusPedido.Pronto, StatusPedido.Cancelado } },
-    { StatusPedido.Pronto, new[] { StatusPedido.EmEntrega, StatusPedido.Cancelado } },
-    { StatusPedido.EmEntrega, new[] { StatusPedido.Entregue, StatusPedido.Cancelado } },
-    { StatusPedido.Entregue, Array.Empty<StatusPedido>() },
-    { StatusPedido.Cancelado, Array.Empty<StatusPedido>() }
-};
+### 6.5 Dashboard
 
-// Dentro de AtualizarStatusAsync:
-if (!TransicoesPermitidas[pedido.Status].Contains(dto.Status))
-    throw new InvalidOperationException(
-        $"Transição de '{pedido.Status}' para '{dto.Status}' não é permitida.");
-```
+| Regra | Implementação |
+|---|---|
+| Receita total | Soma valor_total apenas de pedidos com status Entregue(5) |
+| Pedidos pendentes | Conta pedidos com status Pendente(1) + EmProducao(2) + Pronto(3) |
+| Pedidos por mês | Agrupamento client-side dos últimos 6 meses |
+| Distribuição de status | Contagem client-side de todos os pedidos |
 
 ---
 
-#### **MÉDIO — Exposição de Detalhes de Exceção em Produção**
+## 7. AUTENTICAÇÃO E AUTORIZAÇÃO
 
-**Arquivo:** `Backend/Middleware/ExceptionHandlingMiddleware.cs` (linhas 34-49)
+### 7.1 Fluxo JWT
 
-```csharp
-var response = new ApiResponse<object>
-{
-    Sucesso = false,
-    Mensagem = exception.Message, // Expõe mensagem interna
-    Erros = new List<string> { exception.Message }
-};
+1. `POST /api/auth/login` → valida email + senha (bcrypt) → gera JWT
+2. JWT payload: `{ id, nome, email, perfil }` (perfil é o label, ex: "Administrador")
+3. JWT assinado com HMAC-SHA256 usando `JWT_KEY` do .env
+4. Expiração configurável via `JWT_EXPIRES_HOURS` (default: 8h)
+5. Issuer: `JWT_ISSUER` (default: `XSalgadosApi`)
+6. Audience: `JWT_AUDIENCE` (default: `XSalgadosApp`)
+
+### 7.2 Middleware Pipeline (por requisição)
+
+```
+Request → authenticate() → authorize(...perfis) → validate(schema) → controller → service → supabase
+    ↓ (erro em qualquer etapa)
+errorHandler() → { sucesso: false, mensagem, erros }
 ```
 
-**Risco:** Mensagens de exceção internas (ex: stack traces, nomes de tabelas SQL, detalhes de conexão) são expostas ao cliente, facilitando reconhecimento da infraestrutura.
+### 7.3 Matriz de Permissões (RBAC)
 
-**Correção:**
-```csharp
-var mensagemPublica = exception switch
-{
-    InvalidOperationException => exception.Message,
-    KeyNotFoundException => exception.Message,
-    UnauthorizedAccessException => "Acesso não autorizado.",
-    _ => "Ocorreu um erro interno. Tente novamente mais tarde."
-};
-```
+| Recurso | Administrador | Atendente | Entregador |
+|---|---|---|---|
+| Dashboard | ✅ | ❌ | ❌ |
+| Pedidos (CRUD) | ✅ | ✅ | ❌ |
+| Clientes (CRUD) | ✅ | ✅ | ❌ |
+| Produtos (leitura) | ✅ | ✅ | ✅ |
+| Produtos (escrita) | ✅ | ❌ | ❌ |
+| Usuários (CRUD) | ✅ | ❌ | ❌ |
+| Entregas (rotas) | ✅ | ❌ | ✅ |
+
+### 7.4 Classes de Erro
+
+| Classe | HTTP Status | Uso |
+|---|---|---|
+| `InvalidOperationError` | 400 | Violação de regra de negócio |
+| `NotFoundError` | 404 | Recurso não encontrado |
+| `UnauthorizedError` | 401 | Falha de autenticação |
+| `ConflictError` | 409 | Conflito (ex: email duplicado, cliente com pedidos) |
+| `Error` genérico | 500 | Erro interno (mensagem ocultada em produção) |
 
 ---
 
-#### **BAIXO — Ausência de Validação de Email Único ao Criar Usuário**
+## 8. FRONTEND — ARQUITETURA
 
-**Arquivo:** `Backend/Services/UsuarioService.cs` — método `CriarAsync`
+### 8.1 Roteamento
 
-Ao criar um usuário com email duplicado, o erro será uma exceção do banco de dados (violação de constraint `UNIQUE`), que será tratada genericamente pelo middleware. Não há validação prévia no service.
+| Path | Componente | Roles |
+|---|---|---|
+| `/login` | Login | Público |
+| `/` | Dashboard | ADMINISTRADOR, ATENDENTE |
+| `/pedidos` | ListagemPedidos | ADMINISTRADOR, ATENDENTE |
+| `/clientes` | ListagemClientes | ADMINISTRADOR, ATENDENTE |
+| `/produtos` | ListagemProdutos | ADMINISTRADOR, ATENDENTE |
+| `/usuarios` | ListagemUsuarios | ADMINISTRADOR |
+| `/entregas` | RotasDeEntrega | ENTREGADOR |
+| `*` | NaoEncontrado | Público |
 
-**Correção:**
-```csharp
-var emailExiste = await _context.Usuarios.AnyAsync(u => u.Email == dto.Email);
-if (emailExiste)
-    throw new InvalidOperationException("Já existe um usuário cadastrado com este email.");
-```
+### 8.2 Contextos (Estado Global)
+
+**ContextoAutenticacao:**
+- State: `usuario`, `token`, `carregando`
+- Funções: `login(email, senha)`, `logout()`
+- Token persiste em localStorage
+- Auto-redirect por role após login (Entregador → `/entregas`, demais → `/`)
+
+**ContextoPedidos:**
+- State: `pedidos[]`, `carregando`, `erro`, `atualizandoStatus`, `notificacao`
+- Funções: `carregarPedidos(params)`, `alterarStatusPedido(id, status)`, `buscarPorStatus(status)`
+- Selectors: `pedidosPendentes`, `pedidosEmProducao`, `pedidosProntos`, `pedidosEmEntrega`, etc.
+- useReducer com 7 action types
+
+### 8.3 Mapeamento Backend ↔ Frontend
+
+O frontend usa constantes UPPER_SNAKE_CASE enquanto o backend retorna labels em português.
+
+| Backend Label | Frontend Constant | Valor Numérico |
+|---|---|---|
+| Pendente | PENDENTE | 1 |
+| Em Produção | EM_PREPARO | 2 |
+| Pronto | PRONTO | 3 |
+| Em Entrega | A_CAMINHO | 4 |
+| Entregue | ENTREGUE | 5 |
+| Cancelado | CANCELADO | 6 |
+
+**Alias no Kanban:** `EM_PRODUCAO` é igual a `EM_PREPARO` (valor 2).
+
+Funções de mapeamento centralizadas em `utils/mapeamentos.js`:
+- `mapStatusDoBackend(label)` / `mapStatusParaBackend(constant)`
+- `mapPerfilDoBackend(label)` / `mapPerfilParaBackend(constant)`
+- `mapPedidoDoBackend(obj)`, `mapClienteDoBackend(obj)`, `mapProdutoDoBackend(obj)`, `mapUsuarioDoBackend(obj)`
+
+### 8.4 Axios — Interceptors
+
+- **Request:** Injeta `Authorization: Bearer <token>` de localStorage
+- **Response 401:** Limpa localStorage, redireciona para `/login`
+- **Response erro:** Wraps `{ mensagem, erros[], status }` consistente
+- **Timeout:** 15 segundos
+- **Base URL:** `http://localhost:3000` (hardcoded)
+
+### 8.5 Páginas — Funcionalidades
+
+| Página | Funcionalidade | API calls |
+|---|---|---|
+| Login | Form email/senha, redirect por role | `apiLogin()` |
+| Dashboard | 4 KPIs + LineChart (6 meses) | `buscarDashboardCompleto()` |
+| ListagemPedidos | Vista tabela/Kanban, atualizar status | `buscarPedidos()`, `atualizarStatusPedido()`, `buscarClientes()` |
+| PedidosKanban | 3 colunas (Pendente, Em Produção, Pronto), cards com dropdown status | Optimistic updates via context |
+| ListagemClientes | CRUD completo, modal form, confirm delete | `buscarClientes()`, `criarCliente()`, `atualizarCliente()`, `deletarCliente()` |
+| ListagemProdutos | CRUD completo, modal form, confirm delete | `buscarProdutos()`, `criarProduto()`, `atualizarProduto()`, `deletarProduto()` |
+| ListagemUsuarios | Somente leitura (sem CRUD) | `buscarUsuarios()` |
+| RotasDeEntregas | Agrupamento automático (max 10 pedidos/rota), iniciar rota, marcar entregue | `buscarRotasDeEntrega()`, `alterarStatusPedido()` |
 
 ---
 
-#### **BAIXO — Trust Server Certificate = true**
+## 9. VARIÁVEIS DE AMBIENTE
 
-**Arquivo:** `Backend/appsettings.json`
+### Backend (.env)
 
-```
-Trust Server Certificate=true
-```
+| Variável | Obrigatória | Descrição | Default |
+|---|---|---|---|
+| `SUPABASE_URL` | ✅ | URL do projeto Supabase | — |
+| `SUPABASE_KEY` | ✅ | Service role key do Supabase | — |
+| `JWT_KEY` | ✅ | Chave secreta para assinar JWT (≥32 chars) | — |
+| `JWT_ISSUER` | ❌ | Issuer do token JWT | `XSalgadosApi` |
+| `JWT_AUDIENCE` | ❌ | Audience do token JWT | `XSalgadosApp` |
+| `JWT_EXPIRES_HOURS` | ❌ | Horas de validade do JWT | `8` |
+| `PORT` | ❌ | Porta do servidor Express | `3000` |
+| `CORS_ORIGINS` | ❌ | Origens CORS separadas por vírgula | `http://localhost:3000,http://localhost:5173` |
+| `NODE_ENV` | ❌ | Ambiente (development/production) | `development` |
 
-**Risco:** Desabilita a validação do certificado SSL do servidor PostgreSQL, tornando a conexão vulnerável a ataques MITM.
+### Frontend
 
-**Correção:** Em produção, remover `Trust Server Certificate=true` e configurar o certificado CA raiz do Supabase.
-
----
-
-### 4.2. Resumo de Risco
-
-| # | Vulnerabilidade                              | Severidade | OWASP Top 10       | Status          |
-|---|----------------------------------------------|------------|---------------------|-----------------|
-| 1 | SHA256 sem salt para senhas                  | **CRÍTICO**| A02:2021 - Crypto   | ⛔ Não mitigado |
-| 2 | Chave JWT hardcoded como fallback            | **ALTO**   | A02:2021 - Crypto   | ⛔ Não mitigado |
-| 3 | Token JWT sem refresh (8h de vida)           | **ALTO**   | A07:2021 - Auth     | ⛔ Não mitigado |
-| 4 | Ausência de rate limiting no login           | **ALTO**   | A07:2021 - Auth     | ⛔ Não mitigado |
-| 5 | RequireHttpsMetadata = false                 | **MÉDIO**  | A05:2021 - Misconfig| ⚠️ Parcial     |
-| 6 | Dados sensíveis em appsettings.json          | **MÉDIO**  | A05:2021 - Misconfig| ⚠️ Parcial     |
-| 7 | Sem validação de transição de status         | **MÉDIO**  | A04:2021 - Design   | ⛔ Não mitigado |
-| 8 | Exposição de exceções em produção            | **MÉDIO**  | A05:2021 - Misconfig| ⛔ Não mitigado |
-| 9 | Sem validação de email único no service      | **BAIXO**  | A04:2021 - Design   | ⚠️ Mitigado DB |
-| 10| Trust Server Certificate = true              | **BAIXO**  | A05:2021 - Misconfig| ⛔ Não mitigado |
-
-### 4.3. Medidas de Segurança Já Implementadas
-
-| Medida                                    | Implementação                                         |
-|-------------------------------------------|-------------------------------------------------------|
-| Autenticação JWT                          | HMAC-SHA256, validação de issuer/audience/lifetime     |
-| Autorização RBAC                          | `[Authorize(Roles = "...")]` por endpoint              |
-| CORS restritivo                           | Origens configuráveis via `appsettings.json`           |
-| Validação de entrada (Data Annotations)   | `[Required]`, `[EmailAddress]`, `[Range]`, `[MaxLength]` |
-| Tratamento global de exceções             | `ExceptionHandlingMiddleware` padronizado              |
-| Preço calculado pelo backend              | Valor total nunca vem do cliente; usa dados do banco   |
-| Snapshot de preço unitário                | Imutabilidade do preço histórico em `itens_pedido`     |
-| Indexes de banco otimizados               | Índices em FK e campos frequentemente consultados      |
-| Proteção contra auto-exclusão             | Usuário não pode deletar a si mesmo                    |
-| Proteção referencial de clientes          | Retorna 409 Conflict em vez de erro de DB              |
-| ClockSkew = TimeSpan.Zero                 | Sem tolerância de tempo no JWT (evita replay attacks)  |
-| `AllowedHosts = "*"` apenas em dev        | Filtragem de hosts configurável                        |
+| Variável | Valor |
+|---|---|
+| API_BASE_URL | Hardcoded em `servicos/api.js` como `http://localhost:3000` |
 
 ---
 
-## 5. Guia de Implementação
+## 10. SCRIPTS NPM
 
-### 5.1. Pré-requisitos
-
-| Ferramenta        | Versão Mínima | Finalidade                          |
-|-------------------|--------------|--------------------------------------|
-| .NET SDK          | 8.0          | Runtime e build                      |
-| PostgreSQL        | 14+          | Banco de dados (ou Supabase)         |
-| Node.js           | 18+          | Frontend (se aplicável)              |
-| Git               | 2.x          | Controle de versão                   |
-
-### 5.2. Variáveis de Ambiente / Configuração
-
-Crie `appsettings.Development.json` (arquivo **não** versionado no Git):
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=<HOST>.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.<PROJECT_ID>;Password=<SENHA>;SSL Mode=Require;Trust Server Certificate=true"
-  },
-  "Jwt": {
-    "Key": "<CHAVE_COM_MINIMO_32_CARACTERES>",
-    "Issuer": "XSalgadosApi",
-    "Audience": "XSalgadosApp"
-  },
-  "Cors": {
-    "Origins": "http://localhost:3000,http://localhost:5173"
-  }
-}
-```
-
-| Variável                             | Descrição                                     | Obrigatória |
-|--------------------------------------|-----------------------------------------------|-------------|
-| `ConnectionStrings:DefaultConnection`| String de conexão PostgreSQL/Supabase          | Sim         |
-| `Jwt:Key`                            | Chave simétrica para assinatura JWT (≥32 chars)| Sim        |
-| `Jwt:Issuer`                         | Emissor do token JWT                           | Não (default: `XSalgadosApi`) |
-| `Jwt:Audience`                       | Audiência do token JWT                         | Não (default: `XSalgadosApp`) |
-| `Cors:Origins`                       | Origens permitidas (separadas por vírgula)     | Não (default: `localhost:3000,5173`) |
-
-### 5.3. Passos para Execução
+### Backend
 
 ```bash
-# 1. Clonar o repositório
-git clone <url-do-repositorio>
-cd x-salgados
-
-# 2. Configurar o banco de dados
-# Acesse o SQL Editor do Supabase e execute:
-# Backend/Scripts/create_tables.sql
-
-# 3. Configurar variáveis locais
-cd Backend
-# Crie o arquivo appsettings.Development.json com suas credenciais
-
-# 4. Restaurar dependências
-dotnet restore
-
-# 5. Executar a API
-dotnet run
-
-# 6. Acessar Swagger
-# Abra: http://localhost:5205/swagger
+npm run dev      # tsx watch src/server.ts (hot reload)
+npm run build    # tsc (compila para dist/)
+npm start        # node dist/server.js (produção)
+npm run seed     # tsx src/seed.ts (cria/atualiza admin)
 ```
 
-### 5.4. Dependências do Projeto (NuGet)
-
-| Pacote                                            | Versão  | Finalidade                          |
-|---------------------------------------------------|---------|--------------------------------------|
-| `Microsoft.AspNetCore.Authentication.JwtBearer`    | 8.0.0   | Autenticação JWT                    |
-| `Microsoft.EntityFrameworkCore`                    | 8.0.0   | ORM                                 |
-| `Microsoft.EntityFrameworkCore.Design`             | 8.0.0   | Ferramentas de migração             |
-| `Npgsql.EntityFrameworkCore.PostgreSQL`            | 8.0.0   | Provider PostgreSQL para EF Core    |
-| `Swashbuckle.AspNetCore`                           | 6.6.2   | Swagger UI / OpenAPI                |
-
-### 5.5. Credenciais Padrão (Somente Desenvolvimento)
-
-| Email                        | Senha            | Perfil         |
-|------------------------------|------------------|----------------|
-| `admin@xsalgados.com`        | `admin123`       | Administrador  |
-| `atendente@xsalgados.com`    | `atendente123`   | Atendente      |
-| `entregador@xsalgados.com`   | `entregador123`  | Entregador     |
-
-> ⚠️ **OBRIGATÓRIO:** Alterar todas as credenciais padrão antes de qualquer deploy em produção.
-
-### 5.6. Estrutura de Diretórios
-
-```
-Backend/
-├── Controllers/          # 7 controllers REST
-├── Data/                 # AppDbContext + DbInitializer (seed)
-├── DTOs/                 # Data Transfer Objects por domínio
-│   ├── Auth/             #   LoginDto, LoginResponseDto
-│   ├── Clientes/         #   CriarClienteDto, ClienteDto, etc.
-│   ├── Common/           #   PaginacaoDto, ResultadoPaginadoDto, ApiResponse
-│   ├── Dashboard/        #   KPIs, PedidosPorMes, DistribuicaoStatus
-│   ├── Pedidos/          #   CriarPedidoDto, PedidoDto, PedidoResumoDto, etc.
-│   ├── Produtos/         #   CriarProdutoDto, ProdutoDto, etc.
-│   └── Usuarios/         #   CriarUsuarioDto, AlterarSenhaDto, etc.
-├── Middleware/            # ExceptionHandlingMiddleware
-├── Models/               # Entidades EF Core
-│   └── Enums/            #   PerfilUsuario, StatusPedido
-├── Properties/            # launchSettings.json
-├── Scripts/              # create_tables.sql
-├── Services/             # Lógica de negócio
-│   └── Interfaces/       #   Contratos de serviço (IoC)
-├── appsettings.json      # Configuração base (placeholders)
-├── Backend.csproj        # Projeto .NET
-└── Program.cs            # Entry point + pipeline configuration
-```
-
----
-
-## 6. Casos de Teste
-
-### 6.1. Testes Unitários
-
-#### Teste 1: Hash de senha deve gerar resultado consistente
-```csharp
-[Fact]
-public void HashSenha_MesmaSenha_DeveGerarMesmoHash()
-{
-    // Arrange
-    var authService = CriarAuthService();
-    
-    // Act
-    var hash1 = authService.HashSenha("admin123");
-    var hash2 = authService.HashSenha("admin123");
-    
-    // Assert
-    Assert.Equal(hash1, hash2);
-}
-```
-**Objetivo:** Validar determinismo do hash. **Nota:** Após migração para BCrypt, este teste deve verificar que hashes diferentes são gerados para a mesma senha (por causa do salt).
-
-#### Teste 2: Criar pedido deve calcular valor total a partir do banco
-```csharp
-[Fact]
-public async Task CriarPedido_DeveCalcularValorTotal_ComPrecosDoBanco()
-{
-    // Arrange
-    var context = CriarContextoEmMemoria();
-    context.Produtos.Add(new Produto { Id = 1, Nome = "X-Salada", Preco = 15.00m, Ativo = true, Categoria = "Lanches" });
-    context.Clientes.Add(new Cliente { Id = 1, Nome = "João", Telefone = "11999999999" });
-    await context.SaveChangesAsync();
-    
-    var service = new PedidoService(context);
-    var dto = new CriarPedidoDto
-    {
-        ClienteId = 1,
-        Itens = new List<ItemPedidoDto> 
-        { 
-            new() { ProdutoId = 1, Quantidade = 3 } 
-        }
-    };
-    
-    // Act
-    var (pedido, erros) = await service.CriarAsync(dto);
-    
-    // Assert
-    Assert.Null(erros);
-    Assert.NotNull(pedido);
-    Assert.Equal(45.00m, pedido.ValorTotal); // 15.00 × 3
-}
-```
-**Objetivo:** Garantir que o preço nunca vem do cliente.
-
-#### Teste 3: Excluir cliente com pedidos deve retornar erro
-```csharp
-[Fact]
-public async Task ExcluirCliente_ComPedidos_DeveRetornarConflito()
-{
-    // Arrange
-    var context = CriarContextoEmMemoria();
-    var cliente = new Cliente { Id = 1, Nome = "Maria", Telefone = "11988888888" };
-    context.Clientes.Add(cliente);
-    context.Pedidos.Add(new Pedido { ClienteId = 1, ValorTotal = 10m, Status = StatusPedido.Pendente });
-    await context.SaveChangesAsync();
-    
-    var service = new ClienteService(context);
-    
-    // Act
-    var (sucesso, mensagem) = await service.ExcluirAsync(1);
-    
-    // Assert
-    Assert.False(sucesso);
-    Assert.Contains("pedidos vinculados", mensagem);
-}
-```
-**Objetivo:** Validar regra de integridade referencial no nível do serviço.
-
-#### Teste 4: Usuário não pode excluir a si mesmo
-```csharp
-[Fact]
-public async Task ExcluirUsuario_ProprioUsuario_DeveLancarExcecao()
-{
-    // Arrange
-    var context = CriarContextoEmMemoria();
-    context.Usuarios.Add(new Usuario { Id = 1, Nome = "Admin", Email = "a@a.com", SenhaHash = "h", Perfil = PerfilUsuario.Administrador });
-    await context.SaveChangesAsync();
-    
-    var service = new UsuarioService(context, CriarAuthService());
-    
-    // Act & Assert
-    await Assert.ThrowsAsync<InvalidOperationException>(
-        () => service.ExcluirAsync(1, usuarioLogadoId: 1));
-}
-```
-**Objetivo:** Garantir proteção contra auto-exclusão.
-
-#### Teste 5: Criar pedido com produto inativo deve retornar erro
-```csharp
-[Fact]
-public async Task CriarPedido_ProdutoInativo_DeveRetornarErro()
-{
-    // Arrange
-    var context = CriarContextoEmMemoria();
-    context.Produtos.Add(new Produto { Id = 1, Nome = "X-Antigo", Preco = 10m, Ativo = false, Categoria = "Lanches" });
-    context.Clientes.Add(new Cliente { Id = 1, Nome = "Pedro", Telefone = "11977777777" });
-    await context.SaveChangesAsync();
-    
-    var service = new PedidoService(context);
-    var dto = new CriarPedidoDto
-    {
-        ClienteId = 1,
-        Itens = new List<ItemPedidoDto> { new() { ProdutoId = 1, Quantidade = 1 } }
-    };
-    
-    // Act
-    var (pedido, erros) = await service.CriarAsync(dto);
-    
-    // Assert
-    Assert.Null(pedido);
-    Assert.NotNull(erros);
-    Assert.Contains(erros, e => e.Contains("inativos"));
-}
-```
-**Objetivo:** Garantir que produtos desativados não entram em novos pedidos.
-
----
-
-### 6.2. Testes de Integração
-
-#### Teste 1: Fluxo completo de autenticação e autorização
-```
-1. POST /api/auth/login com credenciais válidas → Espera 200 + token JWT.
-2. GET /api/dashboard/kpis com token de Administrador → Espera 200.
-3. GET /api/dashboard/kpis com token de Atendente → Espera 403 Forbidden.
-4. GET /api/dashboard/kpis sem token → Espera 401 Unauthorized.
-```
-**Objetivo:** Validar pipeline completo de AuthN + AuthZ.
-
-#### Teste 2: CRUD completo de pedido com verificação de snapshot de preço
-```
-1. POST /api/produtos (criar produto com preço R$10).
-2. POST /api/pedidos (criar pedido com 2 unidades do produto).
-3. Verificar: valor_total = R$20, preco_unitario_snapshot = R$10.
-4. PUT /api/produtos (alterar preço para R$15).
-5. GET /api/pedidos/{id} → preco_unitario_snapshot ainda deve ser R$10.
-```
-**Objetivo:** Garantir imutabilidade do preço histórico.
-
-#### Teste 3: Endpoint de rotas filtra corretamente por data e status
-```
-1. Criar pedido com status Pronto e data_entrega = hoje → deve aparecer.
-2. Criar pedido com status Pronto e data_entrega = amanhã → não deve aparecer.
-3. Criar pedido com status Pendente e data_entrega = hoje → não deve aparecer.
-4. GET /api/entregas/rotas → verificar que só o pedido (1) é retornado.
-```
-**Objetivo:** Validar lógica de negócio do módulo de entregas.
-
-#### Teste 4: Paginação com limites e defaults
-```
-1. Inserir 25 clientes no banco.
-2. GET /api/clientes?pagina=1&tamanhoPagina=10 → 10 itens, totalPaginas=3.
-3. GET /api/clientes?pagina=3&tamanhoPagina=10 → 5 itens.
-4. GET /api/clientes?tamanhoPagina=200 → deve ser limitado a 100 (cap do DTO).
-5. GET /api/clientes?pagina=-1 → deve normalizar para página 1.
-```
-**Objetivo:** Validar mecanismo de paginação e seus guardas.
-
-#### Teste 5: Exception middleware retorna formato padronizado
-```
-1. Forçar uma exceção não tratada em um endpoint (ex: banco offline).
-2. Verificar que a resposta é JSON no formato ApiResponse<object>.
-3. Verificar que o status HTTP é 500.
-4. Verificar que o Content-Type é application/json.
-5. Verificar que a mensagem não expõe stack trace (após correção de segurança).
-```
-**Objetivo:** Garantir resiliência e formato consistente de erro.
-
----
-
-## Apêndice A: Comandos Úteis
+### Frontend
 
 ```bash
-# Executar em modo watch (hot reload)
-dotnet watch run
-
-# Build para produção
-dotnet publish -c Release -o ./publish
-
-# Verificar erros de compilação
-dotnet build
-
-# Restaurar dependências
-dotnet restore
+npm run dev      # vite (dev server porta 5173)
+npm run build    # vite build (produção)
+npm run preview  # vite preview (preview do build)
 ```
-
-## Apêndice B: Roadmap de Segurança Recomendado
-
-| Prioridade | Ação                                                    | Esforço Estimado |
-|------------|--------------------------------------------------------|------------------|
-| P0         | Migrar de SHA256 para BCrypt/Argon2id                  | 2-4 horas        |
-| P0         | Remover fallback de chave JWT hardcoded                | 30 minutos       |
-| P1         | Implementar rate limiting no login                     | 1-2 horas        |
-| P1         | Implementar refresh tokens                             | 4-8 horas        |
-| P1         | Adicionar validação de transição de status de pedido   | 1-2 horas        |
-| P2         | Sanitizar mensagens de exceção em produção             | 1 hora           |
-| P2         | Validar email único no service antes de salvar         | 30 minutos       |
-| P2         | Configurar RequireHttpsMetadata por ambiente           | 15 minutos       |
-| P3         | Implementar audit log para operações sensíveis         | 4-8 horas        |
-| P3         | Adicionar HSTS e security headers                      | 1 hora           |
-| P3         | Implementar health checks para o banco de dados        | 1 hora           |
 
 ---
 
-> **Nota Final:** Este documento deve ser revisado a cada sprint ou release, atualizando o status das vulnerabilidades à medida que as correções são implementadas. A seção de Análise de Segurança deve ser tratada como um backlog de segurança vivo.
+## 11. CREDENCIAIS DE DESENVOLVIMENTO
+
+| Email | Senha | Perfil |
+|---|---|---|
+| admin@xsalgados.com | admin123 | Administrador |
+
+> Criadas pelo script `npm run seed`. Para adicionar mais usuários, use a API ou o painel.
+
+---
+
+## 12. PROBLEMAS CONHECIDOS E MELHORIAS PENDENTES
+
+### 🔴 Críticos
+
+| # | Problema | Arquivo(s) | Impacto |
+|---|---|---|---|
+| 1 | **Sem transações atômicas na criação de pedidos** | pedido.service.ts | Se insert de itens falhar APÓS insert do pedido, rollback é manual (delete). Se delete falhar, resta pedido sem itens |
+| 2 | **Sem validação de transição de status** | pedido.service.ts → `atualizarStatusAsync()` | Qualquer transição é aceita (ex: Entregue → Pendente). Falta máquina de estados |
+
+### 🟡 Importantes
+
+| # | Problema | Arquivo(s) | Impacto |
+|---|---|---|---|
+| 3 | **Sem rate limiting no login** | routes/index.ts | Vulnerável a brute force |
+| 4 | **Arquivo .env.example inexistente** | raiz backend | Devs novos não sabem quais variáveis configurar |
+| 5 | **Dashboard faz agregações client-side** | dashboard.service.ts | Carrega TODOS os pedidos em memória para agregar. Não escala |
+| 6 | **Categorias carregam todos os produtos** | produto.service.ts → `obterCategoriasAsync()` | SELECT de todos os produtos para extrair categorias com `new Set()` |
+| 7 | **Token JWT de 8h sem refresh token** | auth.service.ts | Se token interceptado, atacante tem 8h de acesso. Sem revogação |
+
+### 🟢 Melhorias Desejáveis
+
+| # | Melhoria | Descrição |
+|---|---|---|
+| 8 | **Sem formulário de criação de pedidos** | Endpoint POST existe no backend mas não há UI |
+| 9 | **Sem CRUD de usuários no frontend** | Página é somente leitura (sem criar/editar/excluir) |
+| 10 | **Sem paginação visual** | Backend suporta paginação mas frontend não implementa controles |
+| 11 | **Campo "estoque" inconsistente** | FormularioProdutos.jsx tem campo `estoque` mas backend não tem |
+| 12 | **API_BASE_URL hardcoded** | Deveria usar variável de ambiente do Vite (`import.meta.env`) |
+| 13 | **Swagger só em dev** | Swagger UI desabilitado em produção |
+| 14 | **Busca de produtos não funciona** | Frontend envia `busca` mas endpoint não implementa filtro textual |
+
+---
+
+## 13. PADRÕES DE CÓDIGO
+
+### Backend
+
+- **Convenção de nomes:** snake_case no banco e models, camelCase nos DTOs de response
+- **Services:** Funções puras exportadas (sem classes) — `export async function nomeAsync(...)`
+- **Controllers:** try/catch com delegation para services + formatação via `apiOk()`/`apiErro()`
+- **Errors:** Classes tipadas (NotFoundError, InvalidOperationError, etc.) → HTTP status no errorHandler
+- **Validação:** Zod schemas com `.passthrough()` em PaginacaoSchema para preservar query params
+- **Mapper pattern:** Cada service tem `mapToDto()` privado (DB row → response DTO)
+
+### Frontend
+
+- **JavaScript puro** (sem TypeScript — decisão pedagógica para juniores)
+- **CSS puro** (sem Tailwind/Styled Components — decisão pedagógica)
+- **Componentes funcionais** com hooks (useState, useEffect, useReducer, useContext)
+- **Contextos** para estado global (auth + pedidos)
+- **Serviços** isolam toda comunicação HTTP
+- **Mapeamentos** centralizados em `utils/mapeamentos.js`
+
+---
+
+## 14. COMO O SUPABASE É USADO
+
+O projeto usa Supabase **apenas como banco PostgreSQL via PostgREST API**. Não usa:
+- ❌ Supabase Auth (autenticação é JWT customizado)
+- ❌ Supabase Storage
+- ❌ Supabase Realtime
+- ❌ Supabase Edge Functions
+- ❌ Row Level Security (RLS desabilitado — usa service_role key)
+
+### Padrões de Query Supabase Usados no Projeto
+
+```typescript
+// SELECT com paginação
+supabase.from('tabela').select('*', { count: 'exact' })
+  .order('campo', { ascending: false })
+  .range(offset, offset + limit - 1)
+
+// SELECT com JOIN (nested select PostgREST)
+supabase.from('pedidos').select('*, clientes(*), itens_pedido(*, produtos(*))')
+
+// INSERT retornando dados
+supabase.from('tabela').insert({ ... }).select().single()
+
+// UPDATE
+supabase.from('tabela').update({ ... }).eq('id', id).select().single()
+
+// DELETE
+supabase.from('tabela').delete().eq('id', id).select('id').single()
+
+// COUNT sem dados
+supabase.from('tabela').select('id', { count: 'exact', head: true }).eq('campo', valor)
+
+// Busca textual (ilike)
+supabase.from('tabela').or(`nome.ilike.%termo%,email.ilike.%termo%`)
+```
+
+---
+
+## 15. CICLO DE VIDA DO PEDIDO
+
+```
+Pendente (1) ──→ Em Produção (2) ──→ Pronto (3) ──→ Em Entrega (4) ──→ Entregue (5)
+    │                  │                  │                  │
+    └──────────────────┴──────────────────┴──────────────────┘
+                            │
+                            ▼
+                      Cancelado (6) ← (qualquer status exceto Entregue*)
+```
+
+> ⚠️ **A validação de transição de estados NÃO está implementada.** Atualmente, qualquer transição é aceita. Isso está na lista de melhorias pendentes (#2).
+
+**Transições ideais (a implementar):**
+
+| Estado Atual | Transições Permitidas |
+|---|---|
+| Pendente | → Em Produção, → Cancelado |
+| Em Produção | → Pronto, → Cancelado |
+| Pronto | → Em Entrega, → Cancelado |
+| Em Entrega | → Entregue, → Cancelado |
+| Entregue | (estado final) |
+| Cancelado | (estado final) |
+
+---
+
+## 16. RESPONSE DTOs — FORMATO EXATO
+
+### ClienteDto
+```json
+{ "id": 1, "nome": "João", "telefone": "11999999999", "email": "joao@email.com",
+  "endereco": "Rua X, 123", "cidade": "São Paulo", "cep": "01234-567",
+  "dataCriacao": "2026-01-15T10:30:00Z", "totalPedidos": 5 }
+```
+
+### ProdutoDto
+```json
+{ "id": 1, "nome": "X-Salada", "categoria": "Lanches", "descricao": "Pão, hambúrguer, alface",
+  "preco": 15.50, "ativo": true, "dataCriacao": "2026-01-10T08:00:00Z" }
+```
+
+### PedidoDto (detalhado)
+```json
+{ "id": 1, "clienteId": 1, "clienteNome": "João", "clienteTelefone": "11999999999",
+  "clienteEndereco": "Rua X, 123", "dataCriacao": "2026-02-20T14:00:00Z",
+  "dataEntrega": "2026-02-21T12:00:00Z", "valorTotal": 46.50,
+  "status": "Pendente", "statusEnum": 1, "observacoes": "Sem cebola",
+  "itens": [
+    { "id": 1, "produtoId": 1, "produtoNome": "X-Salada", "quantidade": 3,
+      "precoUnitario": 15.50, "subtotal": 46.50 }
+  ] }
+```
+
+### PedidoResumoDto (listagem)
+```json
+{ "id": 1, "clienteNome": "João", "dataCriacao": "2026-02-20T14:00:00Z",
+  "dataEntrega": null, "valorTotal": 46.50, "status": "Pendente",
+  "statusEnum": 1, "quantidadeItens": 3 }
+```
+
+### UsuarioDto
+```json
+{ "id": 1, "nome": "Admin", "email": "admin@xsalgados.com",
+  "perfil": "Administrador", "dataCriacao": "2026-01-01T00:00:00Z", "ativo": true }
+```
+
+### ResultadoPaginadoDto
+```json
+{ "dados": [], "pagina": 1, "tamanhoPagina": 10, "total": 25,
+  "totalPaginas": 3, "temProxima": true, "temAnterior": false }
+```
+
+### DashboardKpisDto
+```json
+{ "receitaTotal": 15230.50, "totalPedidos": 142, "totalClientes": 38,
+  "pedidosPendentes": 12, "pedidosHoje": 5, "receitaHoje": 450.00 }
+```
+
+---
+
+## 17. SEGURANÇA — ESTADO ATUAL
+
+### ✅ Implementado
+
+| Medida | Implementação |
+|---|---|
+| Hashing de senhas | bcrypt com 12 rounds (salt automático) |
+| JWT sem fallback | Lança erro fatal se `JWT_KEY` não configurada |
+| RBAC por endpoint | Middleware `authorize()` verifica perfil do JWT |
+| CORS configurável | Origens via `CORS_ORIGINS` no .env |
+| Validação de input | Zod com mensagens em português |
+| Preço calculado server-side | Nunca aceita valor vindo do cliente |
+| Snapshot de preço | Imutabilidade do preço histórico |
+| Proteção contra auto-exclusão | Usuário não pode deletar a si mesmo |
+| Proteção referencial | 409 ao tentar excluir cliente com pedidos |
+| Validação de email único | Check explícito no service antes do insert |
+| Ocultação de erros em produção | errorHandler oculta detalhes de 500 quando `NODE_ENV=production` |
+
+### ⚠️ Pendências de Segurança
+
+| Prioridade | Item |
+|---|---|
+| P0 | Rate limiting no login (brute force) |
+| P1 | Refresh tokens + reduzir tempo de expiração JWT |
+| P1 | Validação de transição de status (máquina de estados) |
+| P2 | Audit log para operações sensíveis |
+| P2 | Security headers (Helmet.js) |
+| P3 | Health checks para monitoria |
