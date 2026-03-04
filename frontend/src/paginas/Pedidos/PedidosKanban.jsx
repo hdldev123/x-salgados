@@ -21,6 +21,20 @@ const STATUS_CONFIG = {
     bgCor: 'bg-sucesso',
     ordem: 3,
     descricao: 'Pedidos prontos para entrega'
+  },
+  A_CAMINHO: {
+    label: 'Em Trânsito',
+    cor: '#0ea5e9',
+    bgCor: 'bg-info',
+    ordem: 4,
+    descricao: 'Pedidos a caminho do cliente'
+  },
+  ENTREGUE: {
+    label: 'Concluído',
+    cor: '#059669',
+    bgCor: 'bg-sucesso',
+    ordem: 5,
+    descricao: 'Pedidos entregues com sucesso'
   }
 };
 
@@ -63,9 +77,13 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }) {
           statusMapeado = 'EM_PRODUCAO';
           break;
         case 'A_CAMINHO':
+          statusMapeado = 'A_CAMINHO';
+          break;
         case 'ENTREGUE':
+          statusMapeado = 'ENTREGUE';
+          break;
         case 'CANCELADO':
-          // Estes status não aparecem no Kanban (já saíram do fluxo de produção)
+          // Cancelados não aparecem no Kanban
           return;
         default:
           statusMapeado = pedido.status;
@@ -124,6 +142,8 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }) {
         <option value="PENDENTE">Pendente</option>
         <option value="EM_PRODUCAO">Em Produção</option>
         <option value="PRONTO">Pronto</option>
+        <option value="A_CAMINHO">Em Trânsito</option>
+        <option value="ENTREGUE">Concluído</option>
       </select>
     </div>
   );
@@ -175,8 +195,8 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }) {
         </p>
       </div>
 
-      {/* Grid de 3 colunas */}
-      <div className="grid min-h-[70vh] grid-cols-1 gap-5 lg:grid-cols-3">
+      {/* Grid de 5 colunas */}
+      <div className="grid min-h-[70vh] grid-cols-1 gap-5 lg:grid-cols-5">
         {Object.entries(STATUS_CONFIG)
           .sort(([,a], [,b]) => a.ordem - b.ordem)
           .map(([status, config]) => (

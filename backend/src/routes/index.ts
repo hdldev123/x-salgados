@@ -141,7 +141,7 @@ router.post(
 router.patch(
   '/api/pedidos/:id/status',
   authenticate,
-  authorize('Administrador', 'Atendente'),
+  authorize('Administrador', 'Atendente', 'Entregador'),
   validate(AtualizarStatusSchema),
   pedidosController.atualizarStatus,
 );
@@ -199,10 +199,24 @@ router.patch(
 // ENTREGAS — Admin + Entregador
 // ═══════════════════════════════════════════════════════════════════════
 router.get(
-  '/api/entregas/rotas',
+  '/api/entregas/lote',
   authenticate,
   authorize('Administrador', 'Entregador'),
-  entregasController.obterRotasHoje,
+  entregasController.obterLoteEntrega,
+);
+
+router.post(
+  '/api/entregas/liberar-lote',
+  authenticate,
+  authorize('Administrador', 'Entregador'),
+  entregasController.liberarLote,
+);
+
+router.get(
+  '/api/entregas/em-transito',
+  authenticate,
+  authorize('Administrador', 'Entregador'),
+  entregasController.obterPedidosEmTransito,
 );
 
 // ═══════════════════════════════════════════════════════════════════════

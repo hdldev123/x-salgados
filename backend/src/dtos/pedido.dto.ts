@@ -72,3 +72,17 @@ export interface PedidoResumoDto {
   statusEnum: StatusPedido;
   quantidadeItens: number;
 }
+
+// ─── Lote de Entrega ─────────────────────────────────────────────────
+/** Estrutura retornada pelo endpoint GET /api/entregas/lote */
+export interface LoteEntregaDto {
+  pedidosProntos: PedidoDto[];
+  totalItensAcumulados: number;
+}
+
+/** Estrutura retornada pelo endpoint GET /api/entregas/em-transito */
+export interface LoteEmAndamentoDto {
+  pedidosEmTransito: PedidoDto[];
+  totalPedidos: number;
+  valorTotal: number;
+}

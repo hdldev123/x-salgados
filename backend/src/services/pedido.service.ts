@@ -6,6 +6,8 @@ import {
   PedidoDto,
   PedidoResumoDto,
   ItemPedidoResponseDto,
+  LoteEntregaDto,
+  LoteEmAndamentoDto,
 } from '../dtos/pedido.dto';
 import { PaginacaoDto, ResultadoPaginadoDto, criarResultadoPaginado } from '../dtos/common.dto';
 
@@ -224,23 +226,83 @@ export async function atualizarStatusAsync(
   return obterPorIdAsync(id);
 }
 
-// ─── Rotas de Entrega (hoje) ─────────────────────────────────────────
-export async function obterRotasHojeAsync(): Promise<PedidoDto[]> {
-  const hoje = new Date();
-  hoje.setUTCHours(0, 0, 0, 0);
-
-  const amanha = new Date(hoje);
-  amanha.setUTCDate(amanha.getUTCDate() + 1);
-
+// ─── Lote de Entrega (pedidos prontos acumulados) ────────────────────
+/**
+ * Busca todos os pedidos com status PRONTO (3), incluindo seus itens,
+ * e calcula o total acumulado de unidades (soma de quantidade em itens_pedido).
+ * A lógica de "lote" define que o motoboy só pode sair quando >= 900 itens.
+ */
+export async function obterLoteEntregaAsync(): Promise<LoteEntregaDto> {
   const { data: pedidos, error } = await supabase
     .from('pedidos')
     .select('*, clientes(*), itens_pedido(*, produtos(*))')
-    .in('status', [StatusPedido.Pronto, StatusPedido.EmEntrega])
-    .not('data_entrega', 'is', null)
-    .gte('data_entrega', hoje.toISOString())
-    .lt('data_entrega', amanha.toISOString())
-    .order('data_entrega', { ascending: true });
+    .eq('status', StatusPedido.Pronto)
+    .order('data_criacao', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (pedidos || []).map(mapToDto);
+
+  const pedidosMapeados = (pedidos || []).map(mapToDto);
+
+  // Somar TODAS as quantidades de itens de todos os pedidos prontos
+  const totalItensAcumulados = (pedidos || []).reduce((acc, pedido) => {
+    const itensPedido = pedido.itens_pedido || [];
+    return acc + itensPedido.reduce((sum: number, item: any) => sum + item.quantidade, 0);
+  }, 0);
+
+  return {
+    pedidosProntos: pedidosMapeados,
+    totalItensAcumulados,
+  };
+}
+
+// ─── Liberar Lote (Pronto → Em Entrega em massa) ─────────────────────
+/**
+ * Move TODOS os pedidos com status Pronto(3) para Em Entrega(4) de uma vez.
+ * Retorna a quantidade de pedidos afetados.
+ */
+export async function liberarLoteAsync(): Promise<{ pedidosAfetados: number }> {
+  // Buscar IDs dos pedidos prontos
+  const { data: pedidosProntos, error: findError } = await supabase
+    .from('pedidos')
+    .select('id')
+    .eq('status', StatusPedido.Pronto);
+
+  if (findError) throw new Error(findError.message);
+  if (!pedidosProntos || pedidosProntos.length === 0) {
+    return { pedidosAfetados: 0 };
+  }
+
+  const ids = pedidosProntos.map((p: any) => p.id);
+
+  const { error: updateError } = await supabase
+    .from('pedidos')
+    .update({ status: StatusPedido.EmEntrega })
+    .in('id', ids);
+
+  if (updateError) throw new Error(updateError.message);
+
+  return { pedidosAfetados: ids.length };
+}
+
+// ─── Pedidos Em Trânsito ─────────────────────────────────────────────
+/**
+ * Busca todos os pedidos com status Em Entrega(4), incluindo itens e clientes.
+ */
+export async function obterPedidosEmTransitoAsync(): Promise<LoteEmAndamentoDto> {
+  const { data: pedidos, error } = await supabase
+    .from('pedidos')
+    .select('*, clientes(*), itens_pedido(*, produtos(*))')
+    .eq('status', StatusPedido.EmEntrega)
+    .order('data_criacao', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const pedidosMapeados = (pedidos || []).map(mapToDto);
+  const valorTotal = pedidosMapeados.reduce((acc, p) => acc + p.valorTotal, 0);
+
+  return {
+    pedidosEmTransito: pedidosMapeados,
+    totalPedidos: pedidosMapeados.length,
+    valorTotal,
+  };
 }
