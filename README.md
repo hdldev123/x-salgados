@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🥐 X Salgados
+# 🍕 Rangô
 
 ### Sistema de Gestão de Pedidos para Lanchonete
 
@@ -19,7 +19,7 @@
 
 ## 📋 Sobre o Projeto
 
-O **X Salgados** é uma aplicação web fullstack que substitui processos manuais (cadernos, planilhas, WhatsApp) por um fluxo digital centralizado. O sistema cobre o **ciclo operacional completo** de uma lanchonete:
+O **Rangô** é uma aplicação web fullstack que substitui processos manuais (cadernos, planilhas, WhatsApp) por um fluxo digital centralizado. O sistema cobre o **ciclo operacional completo** de uma lanchonete:
 
 - 📦 Cadastro de clientes e produtos
 - 🧾 Criação e acompanhamento de pedidos (Kanban)
