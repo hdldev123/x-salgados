@@ -72,8 +72,17 @@ function ListagemProdutos() {
 
   const colunas = [
     { cabecalho: 'Nome', chave: 'nome' },
+    { cabecalho: 'Categoria', chave: 'categoria' },
     { cabecalho: 'Preço', render: (produto) => `R$ ${produto.preco.toFixed(2)}` },
-    { cabecalho: 'Estoque', chave: 'estoque' },
+    { cabecalho: 'Status', render: (produto) => (
+      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+        produto.ativo
+          ? 'bg-sucesso/10 text-sucesso'
+          : 'bg-grafite-100 text-grafite-400'
+      }`}>
+        {produto.ativo ? 'Ativo' : 'Inativo'}
+      </span>
+    )},
     { cabecalho: 'Ações', render: (produto) => (
       <div className="flex items-center gap-2">
         <button

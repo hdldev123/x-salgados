@@ -4,24 +4,31 @@ import { criarProduto, atualizarProduto } from '../../servicos/apiProdutos';
 function FormularioProduto({ produto, aoSalvar }) {
   const [formData, setFormData] = useState({
     nome: '',
+    categoria: '',
     descricao: '',
     preco: 0,
-    estoque: 0,
+    ativo: true,
   });
 
   useEffect(() => {
     if (produto) {
-      setFormData(produto);
+      setFormData({
+        nome: produto.nome || '',
+        categoria: produto.categoria || '',
+        descricao: produto.descricao || '',
+        preco: produto.preco || 0,
+        ativo: produto.ativo ?? true,
+      });
     } else {
-      setFormData({ nome: '', descricao: '', preco: 0, estoque: 0 });
+      setFormData({ nome: '', categoria: '', descricao: '', preco: 0, ativo: true });
     }
   }, [produto]);
 
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prevState => ({ 
         ...prevState, 
-        [name]: type === 'number' ? parseFloat(value) : value 
+        [name]: type === 'checkbox' ? checked : type === 'number' ? parseFloat(value) : value 
     }));
   };
 
@@ -48,16 +55,27 @@ function FormularioProduto({ produto, aoSalvar }) {
         <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className={inputClasses} />
       </div>
       <div className="mb-4">
+        <label htmlFor="categoria" className="mb-1.5 block text-sm font-medium text-grafite-700">Categoria</label>
+        <input type="text" name="categoria" value={formData.categoria} onChange={handleChange} required className={inputClasses} />
+      </div>
+      <div className="mb-4">
         <label htmlFor="descricao" className="mb-1.5 block text-sm font-medium text-grafite-700">Descrição</label>
         <input type="text" name="descricao" value={formData.descricao} onChange={handleChange} className={inputClasses} />
       </div>
       <div className="mb-4">
         <label htmlFor="preco" className="mb-1.5 block text-sm font-medium text-grafite-700">Preço</label>
-        <input type="number" name="preco" step="0.01" value={formData.preco} onChange={handleChange} className={inputClasses} />
+        <input type="number" name="preco" step="0.01" value={formData.preco} onChange={handleChange} required className={inputClasses} />
       </div>
-      <div className="mb-4">
-        <label htmlFor="estoque" className="mb-1.5 block text-sm font-medium text-grafite-700">Estoque</label>
-        <input type="number" name="estoque" value={formData.estoque} onChange={handleChange} className={inputClasses} />
+      <div className="mb-4 flex items-center gap-3">
+        <input
+          type="checkbox"
+          name="ativo"
+          id="ativo"
+          checked={formData.ativo}
+          onChange={handleChange}
+          className="h-4 w-4 rounded border-grafite-300 text-primary-500 focus:ring-primary-500"
+        />
+        <label htmlFor="ativo" className="text-sm font-medium text-grafite-700">Produto ativo</label>
       </div>
       <div className="mt-6 flex justify-end border-t border-grafite-200 pt-4">
         <button

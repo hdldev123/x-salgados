@@ -67,11 +67,11 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }) {
       grupos[status] = [];
     });
 
-    // Agrupar pedidos por status (considerando também os status atuais do mock)
+    // Agrupar pedidos por status
     pedidosAtualizados.forEach(pedido => {
       let statusMapeado = pedido.status;
       
-      // Mapear os status existentes no mock para os do Kanban
+      // Mapear os status do backend para as colunas do Kanban
       switch (pedido.status) {
         case 'EM_PREPARO':
           statusMapeado = 'EM_PRODUCAO';

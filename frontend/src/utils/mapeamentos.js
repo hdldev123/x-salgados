@@ -140,8 +140,7 @@ export function mapItemPedidoDoBackend(item) {
 /**
  * Mapeia um produto do backend para o formato do frontend.
  * Backend: { id, nome, categoria, descricao, preco, ativo, dataCriacao }
- * Frontend mock: { id, nome, descricao, preco, estoque }
- * Frontend adaptado: mantém todos os campos do backend + ativo como campo extra
+ * Frontend: { id, nome, categoria, descricao, preco, ativo, dataCriacao }
  */
 export function mapProdutoDoBackend(produto) {
   if (!produto) return null;
@@ -159,7 +158,7 @@ export function mapProdutoDoBackend(produto) {
 /**
  * Mapeia um cliente do backend para o formato do frontend.
  * Backend: { id, nome, telefone, email, endereco, cidade, cep, dataCriacao, totalPedidos }
- * Frontend mock: { id, nome, email, telefone, endereco }
+ * Frontend: { id, nome, email, telefone, endereco, cidade, cep, dataCriacao, totalPedidos }
  */
 export function mapClienteDoBackend(cliente) {
   if (!cliente) return null;
