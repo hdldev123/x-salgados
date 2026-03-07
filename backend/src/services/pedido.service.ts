@@ -73,6 +73,7 @@ export async function obterTodosAsync(
 
   const dados: PedidoResumoDto[] = (data || []).map((pedido: any) => ({
     id: pedido.id,
+    clienteId: pedido.cliente_id,
     clienteNome: pedido.clientes?.nome ?? '',
     dataCriacao: pedido.data_criacao,
     dataEntrega: pedido.data_entrega,

@@ -1,6 +1,8 @@
 import { supabase } from '../config/database';
 import * as pedidoService from './pedido.service';
 import type { WASocket } from '@whiskeysockets/baileys';
+import { StatusPedido, StatusPedidoLabel } from '../models/enums';
+import type { PedidoDto } from '../dtos/pedido.dto';
 import {
     EtapaConversa,
     obterEstado,
@@ -12,7 +14,40 @@ import {
 
 /** Número WhatsApp do administrador que recebe as notificações de pedido */
 const ADMIN_JID = '5532999269379@s.whatsapp.net';
+// ─── Cache telefone → remoteJid ──────────────────────────────────
 
+/**
+ * Cache em memória que mapeia o telefone normalizado do cliente
+ * para o remoteJid real usado pelo Baileys (pode ser @lid ou @s.whatsapp.net).
+ *
+ * É preenchido automaticamente toda vez que o cliente envia uma mensagem.
+ * Usado para envio de notificações prolátivas sem depender de construir
+ * o JID a partir do telefone (o que falha para contas com @lid).
+ */
+const jidCache = new Map<string, string>();
+
+/**
+ * Registra ou atualiza o remoteJid de um cliente no cache.
+ * Deve ser chamado sempre que uma mensagem válida for recebida.
+ */
+function registrarJid(telefoneLimpo: string, remoteJid: string): void {
+    jidCache.set(telefoneLimpo, remoteJid);
+}
+
+/**
+ * Resolve o JID de envio para um telefone.
+ * Prioriza o cache (JID real que o Baileys usa) e cai de volta
+ * para a construção clássica @s.whatsapp.net como fallback.
+ */
+function resolverJid(telefoneLimpo: string): string {
+    if (jidCache.has(telefoneLimpo)) {
+        return jidCache.get(telefoneLimpo)!;
+    }
+    // Fallback: construir JID a partir do número
+    const digits = telefoneLimpo.replace(/\D/g, '');
+    const withCountry = digits.length <= 11 ? `55${digits}` : digits;
+    return `${withCountry}@s.whatsapp.net`;
+}
 // ─── Tipos internos ──────────────────────────────────────────────────
 
 /** Payload simplificado vindo do Baileys (evento messages.upsert) */
@@ -25,6 +60,13 @@ interface WhatsAppPayload {
             fromMe?: boolean;
             id?: string;
         };
+        /**
+         * JID com o número de telefone real (`XXXX@s.whatsapp.net`).
+         * Pode diferir de `key.remoteJid` quando o WhatsApp usa @lid (Linked Identity).
+         * Use este campo para buscar/cadastrar o cliente no banco.
+         * Use `key.remoteJid` para enviar respostas.
+         */
+        phoneJid?: string;
         pushName?: string;
         message?: {
             conversation?: string;
@@ -48,16 +90,29 @@ interface WhatsAppPayload {
  */
 async function enviarMensagem(jid: string, text: string): Promise<void> {
     // Importação lazy para evitar dependência circular com baileys.service.
-    // baileys.service já importa whatsapp.service; se usarmos import estático aqui,
-    // o CJS retorna o módulo parcialmente inicializado e getSocket fica undefined.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getSocket } = require('./baileys.service') as { getSocket: () => WASocket | null };
+    const { getSocket, resolverJidParaEnvio } = require('./baileys.service') as {
+        getSocket: () => WASocket | null;
+        resolverJidParaEnvio: (jid: string) => string;
+    };
     const sock = getSocket();
     if (!sock) {
         console.warn('[WhatsApp] Socket não disponível. Mensagem não enviada para', jid);
         return;
     }
-    await sock.sendMessage(jid, { text });
+
+    // @lid JIDs NÃO são entregáveis — converter para @s.whatsapp.net
+    const jidEnvio = resolverJidParaEnvio(jid);
+
+    if (jidEnvio.endsWith('@lid')) {
+        console.warn(
+            `[WhatsApp] ⚠️ JID @lid não resolvido: ${jid}. ` +
+            `Mensagem pode não ser entregue. Aguardando sincronização de contatos.`,
+        );
+    }
+
+    await sock.sendMessage(jidEnvio, { text });
+    console.log(`[WhatsApp] 📤 Mensagem enviada para ${jidEnvio}${jidEnvio !== jid ? ` (lid: ${jid})` : ''}`);
 }
 
 /**
@@ -148,6 +203,108 @@ async function buscarClientePorTelefone(telefoneLimpo: string): Promise<any | nu
 }
 
 /**
+ * Busca o pedido ativo mais recente de um cliente.
+ * Pedido ativo = qualquer status EXCETO Entregue (5) e Cancelado (6).
+ * Retorna o registro ou `null` se não existir pedido em aberto.
+ */
+async function buscarPedidoAtivo(clienteId: number): Promise<any | null> {
+    const { data, error } = await supabase
+        .from('pedidos')
+        .select('id, status, data_criacao, observacoes')
+        .eq('cliente_id', clienteId)
+        .not('status', 'in', `(${StatusPedido.Entregue},${StatusPedido.Cancelado})`)
+        .order('data_criacao', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        console.error('[WhatsApp] Erro ao buscar pedido ativo:', error.message);
+        return null;
+    }
+    return data ?? null;
+}
+
+/**
+ * Converte um número de telefone armazenado no banco para um JID do WhatsApp.
+ * Ex: "32998336398" → "5532998336398@s.whatsapp.net"
+ * @deprecated Prefira `resolverJid()` que usa o cache de JIDs reais.
+ */
+function telefoneParaJid(telefone: string): string {
+    const digits = telefone.replace(/\D/g, '');
+    const withCountry = digits.length <= 11 ? `55${digits}` : digits;
+    return `${withCountry}@s.whatsapp.net`;
+}
+
+/**
+ * Retorna o emoji e label amigável para o status do pedido.
+ */
+function labelStatusParaCliente(status: number): string {
+    const emojis: Record<number, string> = {
+        [StatusPedido.Pendente]:   '⏳ Pendente — aguardando início da produção',
+        [StatusPedido.EmProducao]: '👨‍🍳 Em Produção — seu pedido está sendo preparado',
+        [StatusPedido.Pronto]:     '✅ Pronto — seu pedido está pronto para entrega',
+        [StatusPedido.EmEntrega]:  '🛵 A Caminho — seu pedido está a caminho!',
+    };
+    return emojis[status] ?? StatusPedidoLabel[status as StatusPedido] ?? 'Em andamento';
+}
+
+/**
+ * Retorna uma mensagem complementar conforme o novo status.
+ */
+function obterMensagemComplementarStatus(status: StatusPedido): string {
+    switch (status) {
+        case StatusPedido.EmProducao:
+            return 'Seu pedido está sendo preparado com carinho! 🧑‍🍳';
+        case StatusPedido.Pronto:
+            return 'Seu pedido está pronto e aguardando o entregador! 📦';
+        case StatusPedido.EmEntrega:
+            return 'O entregador está a caminho! Fique de olho. 🛵';
+        case StatusPedido.Entregue:
+            return (
+                'Pedido entregue! Obrigado por escolher a *X Salgados*! 🧡\n\n' +
+                'Qualquer hora pode fazer um novo pedido. 😊'
+            );
+        default:
+            return '';
+    }
+}
+
+// ─── Notificação de Status (chamada pelo controller) ─────────────────
+
+/**
+ * Envia uma notificação automática ao cliente quando o status do pedido
+ * é alterado pelo painel administrativo.
+ *
+ * @param pedido - PedidoDto atualizado, com clienteTelefone e statusEnum
+ */
+export async function notificarClienteStatusPedido(pedido: PedidoDto): Promise<void> {
+    if (!pedido.clienteTelefone) {
+        console.warn(`[WhatsApp] Pedido #${pedido.id}: cliente sem telefone, notificação ignorada.`);
+        return;
+    }
+
+    // Usa o cache de JID real (preenchido quando o cliente enviou mensagem anterior).
+    // Se o cliente nunca enviou mensagem, cai no fallback @s.whatsapp.net.
+    const telefoneLimpo = limparTelefone(pedido.clienteTelefone);
+    const jid = resolverJid(telefoneLimpo);
+
+    const statusLabel = labelStatusParaCliente(pedido.statusEnum);
+    const complemento = obterMensagemComplementarStatus(pedido.statusEnum);
+
+    const mensagem =
+        `📦 *Atualização do seu pedido #${pedido.id}*\n\n` +
+        `📌 *Status:* ${statusLabel}` +
+        (complemento ? `\n\n${complemento}` : '');
+
+    try {
+        await enviarMensagem(jid, mensagem);
+        console.log(`[WhatsApp] ✅ Cliente ${pedido.clienteNome} notificado sobre pedido #${pedido.id} (${statusLabel}).`);
+    } catch (err: any) {
+        console.error(`[WhatsApp] Falha ao notificar cliente sobre pedido #${pedido.id}:`, err.message);
+    }
+}
+
+/**
  * Cadastra um novo cliente no Supabase e retorna o registro criado.
  * Retorna `null` se ocorrer erro na inserção.
  *
@@ -218,6 +375,7 @@ async function processarOnboarding(
     remoteJid: string,
     texto: string,
     nomeContato: string,
+    telefoneLimpo: string,
 ): Promise<any | null> {
     const estado = obterEstado(remoteJid);
     const etapaAtual = estado?.etapa ?? EtapaConversa.INICIAL;
@@ -274,7 +432,6 @@ async function processarOnboarding(
             }
 
             const nome = estado!.dados.nome!;
-            const telefoneLimpo = limparTelefone(remoteJid);
 
             const novoCliente = await cadastrarCliente(nome, telefoneLimpo, endereco);
 
@@ -334,17 +491,47 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         }
 
         const remoteJid = payload.data!.key!.remoteJid!;
+        // phoneJid é o JID com o número real; fallback para remoteJid se não disponível
+        const phoneJid = payload.data?.phoneJid || remoteJid;
         const texto = extrairTexto(payload)!;
         const nomeContato = payload.data?.pushName ?? 'Desconhecido';
 
         console.log(`[WhatsApp] Mensagem recebida de ${nomeContato} (${remoteJid}): "${texto}"`);
 
-        // ── 2. Normalizar telefone
-        const telefoneLimpo = limparTelefone(remoteJid);
+        // ── 2. Resolver @lid e normalizar telefone
+        //    Tenta resolver o @lid para @s.whatsapp.net usando o mapa de contatos.
+        //    Se não conseguir, usamos o phoneJid como recebido (pode ser @lid).
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { resolverJidParaEnvio } = require('./baileys.service') as {
+            resolverJidParaEnvio: (jid: string) => string;
+        };
+        const phoneJidResolvido = resolverJidParaEnvio(phoneJid);
+        const telefoneLimpo = limparTelefone(phoneJidResolvido);
 
         if (telefoneLimpo.length < 10) {
             console.warn(`[WhatsApp] Telefone inválido após normalização: "${telefoneLimpo}" (original: ${remoteJid})`);
             return;
+        }
+
+        // ── 2a. Registrar mapeamento telefone → JID de envio (para notificações futuras)
+        //    Preferir o JID @s.whatsapp.net resolvido (entregável) ao @lid original.
+        const jidParaCache = phoneJidResolvido.endsWith('@s.whatsapp.net')
+            ? phoneJidResolvido
+            : remoteJid;
+        registrarJid(telefoneLimpo, jidParaCache);
+
+        // ── 2b. Se o @lid foi resolvido e o cliente tem telefone errado no banco, corrigir
+        if (phoneJidResolvido !== phoneJid) {
+            const telErrado = limparTelefone(phoneJid);
+            if (telErrado !== telefoneLimpo) {
+                const { error: updateErr } = await supabase
+                    .from('clientes')
+                    .update({ telefone: telefoneLimpo })
+                    .eq('telefone', telErrado);
+                if (!updateErr) {
+                    console.log(`[WhatsApp] 📱 Telefone do cliente corrigido no banco: ${telErrado} → ${telefoneLimpo}`);
+                }
+            }
         }
 
         // ── 3. Verificar se há onboarding em andamento
@@ -352,7 +539,7 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
 
         if (estadoAtual) {
             // Cliente está no meio do cadastro — processar onboarding
-            const clienteOnboarding = await processarOnboarding(remoteJid, texto, nomeContato);
+            const clienteOnboarding = await processarOnboarding(remoteJid, texto, nomeContato, telefoneLimpo);
 
             if (!clienteOnboarding) {
                 // Onboarding ainda em andamento; aguardando próxima resposta
@@ -369,13 +556,30 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
 
         // ── 5. Cliente não existe → iniciar onboarding
         if (!cliente) {
-            await processarOnboarding(remoteJid, texto, nomeContato);
+            await processarOnboarding(remoteJid, texto, nomeContato, telefoneLimpo);
             return;
         }
 
         console.log(`[WhatsApp] Cliente encontrado: ${cliente.nome} (ID: ${cliente.id})`);
 
-        // ── 6. Criar pedido (placeholder — MVP)
+        // ── 6. Verificar se já existe um pedido ativo para este cliente
+        const pedidoAtivo = await buscarPedidoAtivo(cliente.id);
+
+        if (pedidoAtivo) {
+            const statusLabel = labelStatusParaCliente(pedidoAtivo.status);
+            await enviarMensagem(
+                remoteJid,
+                `Olá, *${cliente.nome}*! 👋\n\n` +
+                `Você já tem um pedido em aberto:\n` +
+                `📦 *Pedido #${pedidoAtivo.id}*\n` +
+                `📌 *Status:* ${statusLabel}\n\n` +
+                `Assim que seu pedido for entregue, você poderá fazer um novo pedido. 😊`,
+            );
+            console.log(`[WhatsApp] Cliente ${cliente.nome} já tem pedido ativo #${pedidoAtivo.id} (status: ${pedidoAtivo.status}). Ignorando novo pedido.`);
+            return;
+        }
+
+        // ── 7. Criar pedido (placeholder — MVP)
         const { data: produtoPlaceholder, error: produtoError } = await supabase
             .from('produtos')
             .select('id, preco')

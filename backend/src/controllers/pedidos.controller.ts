@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as pedidoService from '../services/pedido.service';
+import { notificarClienteStatusPedido } from '../services/whatsapp.service';
 
 /**
  * GET /api/pedidos
@@ -72,6 +73,11 @@ export async function atualizarStatus(req: Request, res: Response, next: NextFun
       res.status(404).json({ sucesso: false, mensagem: 'Pedido não encontrado.' });
       return;
     }
+
+    // Notificar cliente via WhatsApp de forma assíncrona (fire-and-forget)
+    notificarClienteStatusPedido(pedido).catch((err) =>
+      console.error('[WhatsApp] Erro ao notificar cliente após mudança de status:', err.message),
+    );
 
     res.json(pedido);
   } catch (error) {

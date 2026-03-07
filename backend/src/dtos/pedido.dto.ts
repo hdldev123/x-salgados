@@ -64,6 +64,7 @@ export interface PedidoDto {
 
 export interface PedidoResumoDto {
   id: number;
+  clienteId: number;
   clienteNome: string;
   dataCriacao: Date;
   dataEntrega: Date | null;
