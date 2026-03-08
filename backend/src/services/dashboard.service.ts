@@ -1,5 +1,5 @@
 import { supabase } from '../config/database';
-import { StatusPedido, StatusPedidoLabel } from '../models/enums';
+import { StatusPedidoLabel } from '../models/enums';
 import {
   DashboardKpisDto,
   PedidosPorMesDto,
@@ -7,123 +7,68 @@ import {
   DashboardCompletoDto,
 } from '../dtos/dashboard.dto';
 
-// ─── KPIs ────────────────────────────────────────────────────────────
-export async function obterKpisAsync(): Promise<DashboardKpisDto> {
-  const hoje = new Date();
-  hoje.setUTCHours(0, 0, 0, 0);
-  const amanha = new Date(hoje);
-  amanha.setUTCDate(amanha.getUTCDate() + 1);
+// Nomes dos meses em pt-BR para formatação do gráfico
+const NOMES_MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-  // Executar consultas em paralelo para performance
-  const [pedidosResult, clientesResult, pedidosHojeResult] = await Promise.all([
-    // Todos os pedidos (status + valor)
-    supabase.from('pedidos').select('status, valor_total, data_criacao'),
-    // Total de clientes
+// ─── KPIs ────────────────────────────────────────────────────────────
+// DBA-003: antes buscava TODOS os pedidos + clientes em memória e calculava em JS.
+// Agora usa a RPC `get_dashboard_kpis` que faz COUNT/SUM diretamente no Postgres.
+export async function obterKpisAsync(): Promise<DashboardKpisDto> {
+  const [kpisResult, clientesResult] = await Promise.all([
+    supabase.rpc('get_dashboard_kpis').single(),
     supabase.from('clientes').select('id', { count: 'exact', head: true }),
-    // Pedidos criados hoje
-    supabase
-      .from('pedidos')
-      .select('status, valor_total')
-      .gte('data_criacao', hoje.toISOString())
-      .lt('data_criacao', amanha.toISOString()),
   ]);
 
-  const pedidos = pedidosResult.data || [];
-  const totalPedidos = pedidos.length;
-  const totalClientes = clientesResult.count || 0;
+  if (kpisResult.error) throw new Error(kpisResult.error.message);
 
-  // Receita total (apenas pedidos entregues)
-  const receitaTotal = pedidos
-    .filter((p: any) => p.status === StatusPedido.Entregue)
-    .reduce((sum: number, p: any) => sum + Number(p.valor_total), 0);
-
-  // Pedidos pendentes (Pendente + EmProducao + Pronto)
-  const pedidosPendentes = pedidos.filter((p: any) =>
-    [StatusPedido.Pendente, StatusPedido.EmProducao, StatusPedido.Pronto].includes(p.status),
-  ).length;
-
-  const pedidosHoje = pedidosHojeResult.data || [];
-  const receitaHoje = pedidosHoje
-    .filter((p: any) => p.status === StatusPedido.Entregue)
-    .reduce((sum: number, p: any) => sum + Number(p.valor_total), 0);
+  const k = kpisResult.data as {
+    receita_total: string;
+    total_pedidos: string;
+    pedidos_pendentes: string;
+    pedidos_hoje: string;
+    receita_hoje: string;
+  };
 
   return {
-    receitaTotal,
-    totalPedidos,
-    totalClientes,
-    pedidosPendentes,
-    pedidosHoje: pedidosHoje.length,
-    receitaHoje,
+    receitaTotal: Number(k.receita_total),
+    totalPedidos: Number(k.total_pedidos),
+    totalClientes: clientesResult.count ?? 0,
+    pedidosPendentes: Number(k.pedidos_pendentes),
+    pedidosHoje: Number(k.pedidos_hoje),
+    receitaHoje: Number(k.receita_hoje),
   };
 }
 
 // ─── Pedidos por Mês ─────────────────────────────────────────────────
+// DBA-003: antes trazia todos os pedidos do período e agrupava em JS com Map.
+// Agora usa a RPC `get_pedidos_por_mes` — GROUP BY no Postgres, só o resultado chega ao Node.
 export async function obterPedidosPorMesAsync(meses: number = 6): Promise<PedidosPorMesDto[]> {
-  const dataInicio = new Date();
-  dataInicio.setUTCMonth(dataInicio.getUTCMonth() - meses + 1);
-  dataInicio.setUTCDate(1);
-  dataInicio.setUTCHours(0, 0, 0, 0);
-
-  const nomesMeses = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-
-  const { data: pedidos, error } = await supabase
-    .from('pedidos')
-    .select('data_criacao, status, valor_total')
-    .gte('data_criacao', dataInicio.toISOString());
+  const { data, error } = await supabase.rpc('get_pedidos_por_mes', { qtd_meses: meses });
 
   if (error) throw new Error(error.message);
 
-  // Agrupar por ano/mês no lado do cliente
-  const grupoMap = new Map<string, { ano: number; mes: number; totalPedidos: number; receitaTotal: number }>();
-
-  for (const p of pedidos || []) {
-    const data = new Date(p.data_criacao);
-    const ano = data.getUTCFullYear();
-    const mes = data.getUTCMonth() + 1;
-    const key = `${ano}-${mes}`;
-
-    if (!grupoMap.has(key)) {
-      grupoMap.set(key, { ano, mes, totalPedidos: 0, receitaTotal: 0 });
-    }
-    const grupo = grupoMap.get(key)!;
-    grupo.totalPedidos++;
-    if (p.status === StatusPedido.Entregue) {
-      grupo.receitaTotal += Number(p.valor_total);
-    }
-  }
-
-  return Array.from(grupoMap.values())
-    .sort((a, b) => a.ano - b.ano || a.mes - b.mes)
-    .map((d) => ({
-      ano: d.ano,
-      mes: d.mes,
-      mesNome: nomesMeses[d.mes] || '',
-      totalPedidos: d.totalPedidos,
-      receitaTotal: d.receitaTotal,
-    }));
+  return (data ?? []).map((row: any) => ({
+    ano: Number(row.ano),
+    mes: Number(row.mes),
+    mesNome: NOMES_MESES[Number(row.mes)] ?? '',
+    totalPedidos: Number(row.total_pedidos),
+    receitaTotal: Number(row.receita_total),
+  }));
 }
 
 // ─── Distribuição de Status ──────────────────────────────────────────
+// DBA-003: antes buscava todos os status e contava em JS.
+// Agora usa a RPC `get_distribuicao_status_pedidos` — GROUP BY no Postgres.
 export async function obterDistribuicaoStatusAsync(): Promise<DistribuicaoStatusDto[]> {
-  const { data: pedidos, error } = await supabase
-    .from('pedidos')
-    .select('status');
+  const { data, error } = await supabase.rpc('get_distribuicao_status_pedidos');
 
   if (error) throw new Error(error.message);
+  if (!data || data.length === 0) return [];
 
-  const total = (pedidos || []).length;
-  if (total === 0) return [];
-
-  // Agrupar por status no lado do cliente
-  const statusCount = new Map<number, number>();
-  for (const p of pedidos || []) {
-    statusCount.set(p.status, (statusCount.get(p.status) || 0) + 1);
-  }
-
-  return Array.from(statusCount.entries()).map(([status, quantidade]) => ({
-    status: StatusPedidoLabel[status as StatusPedido] || status.toString(),
-    quantidade,
-    percentual: Math.round((quantidade / total) * 10000) / 100,
+  return data.map((row: any) => ({
+    status: StatusPedidoLabel[Number(row.status) as keyof typeof StatusPedidoLabel] ?? row.status.toString(),
+    quantidade: Number(row.quantidade),
+    percentual: Number(row.percentual),
   }));
 }
 
