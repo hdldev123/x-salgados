@@ -12,8 +12,19 @@ import {
 
 // ─── Constantes ──────────────────────────────────────────────────────
 
-/** Número WhatsApp do administrador que recebe as notificações de pedido */
-const ADMIN_JID = '5532999269379@s.whatsapp.net';
+/**
+ * JID WhatsApp do administrador que recebe notificações de novos pedidos.
+ * Formato esperado: "5511999999999@s.whatsapp.net"
+ * Configurado em WHATSAPP_ADMIN_JID no .env.
+ */
+const ADMIN_JID = process.env.WHATSAPP_ADMIN_JID ?? null;
+
+if (!ADMIN_JID) {
+    console.error(
+        '[WhatsApp] ⚠️  WHATSAPP_ADMIN_JID não configurado no .env. ' +
+        'Notificações de novos pedidos ao administrador estão DESATIVADAS.',
+    );
+}
 
 // ─── Persistência de JID (banco de dados) ────────────────────────────
 
@@ -308,10 +319,10 @@ function telefoneParaJid(telefone: string): string {
  */
 function labelStatusParaCliente(status: number): string {
     const emojis: Record<number, string> = {
-        [StatusPedido.Pendente]:   '⏳ Pendente — aguardando início da produção',
+        [StatusPedido.Pendente]: '⏳ Pendente — aguardando início da produção',
         [StatusPedido.EmProducao]: '👨‍🍳 Em Produção — seu pedido está sendo preparado',
-        [StatusPedido.Pronto]:     '✅ Pronto — seu pedido está pronto para entrega',
-        [StatusPedido.EmEntrega]:  '🛵 A Caminho — seu pedido está a caminho!',
+        [StatusPedido.Pronto]: '✅ Pronto — seu pedido está pronto para entrega',
+        [StatusPedido.EmEntrega]: '🛵 A Caminho — seu pedido está a caminho!',
     };
     return emojis[status] ?? StatusPedidoLabel[status as StatusPedido] ?? 'Em andamento';
 }
@@ -437,6 +448,11 @@ async function notificarAdministrador(
     endereco: string | null,
     textoPedido: string,
 ): Promise<void> {
+    if (!ADMIN_JID) {
+        console.warn('[WhatsApp] Notificação ao administrador ignorada — WHATSAPP_ADMIN_JID não configurado.');
+        return;
+    }
+
     const mensagem =
         `📋 *Novo Pedido via WhatsApp*\n\n` +
         `👤 *Cliente:* ${clienteNome}\n` +
@@ -702,13 +718,13 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
             if (!clienteOnboarding) {
                 // Onboarding ainda em andamento; aguardando próxima resposta
                 // Logar mensagem inbound sem clienteId (ainda não cadastrado)
-                logarMensagem(null, remoteJid, texto, 'INBOUND').catch(() => {});
+                logarMensagem(null, remoteJid, texto, 'INBOUND').catch(() => { });
                 return;
             }
 
             // Onboarding acabou de ser concluído, mas a mensagem atual era o endereço.
             // O próximo texto do cliente será o pedido de fato.
-            logarMensagem(clienteOnboarding.id, remoteJid, texto, 'INBOUND').catch(() => {});
+            logarMensagem(clienteOnboarding.id, remoteJid, texto, 'INBOUND').catch(() => { });
             return;
         }
 
@@ -718,17 +734,17 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         // ── 5. Cliente não existe → iniciar onboarding
         if (!cliente) {
             await processarOnboarding(remoteJid, texto, nomeContato, telefoneLimpo);
-            logarMensagem(null, remoteJid, texto, 'INBOUND').catch(() => {});
+            logarMensagem(null, remoteJid, texto, 'INBOUND').catch(() => { });
             return;
         }
 
         console.log(`[WhatsApp] Cliente encontrado: ${cliente.nome} (ID: ${cliente.id})`);
 
         // Persistir JIDs no banco agora que sabemos o clienteId
-        salvarJidCliente(cliente.id, telefoneLimpo, whatsappJid, whatsappLid).catch(() => {});
+        salvarJidCliente(cliente.id, telefoneLimpo, whatsappJid, whatsappLid).catch(() => { });
 
         // Logar mensagem inbound
-        logarMensagem(cliente.id, remoteJid, texto, 'INBOUND').catch(() => {});
+        logarMensagem(cliente.id, remoteJid, texto, 'INBOUND').catch(() => { });
 
         // ── 6. Verificar se já existe um pedido ativo para este cliente
         const pedidoAtivo = await buscarPedidoAtivo(cliente.id);
