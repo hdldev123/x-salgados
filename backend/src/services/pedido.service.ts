@@ -161,39 +161,26 @@ export async function criarAsync(
     });
   }
 
-  // Inserir pedido
-  const { data: pedidoCriado, error: pedidoError } = await supabase
-    .from('pedidos')
-    .insert({
-      cliente_id: dto.clienteId,
-      data_entrega: dto.dataEntrega ?? null,
-      valor_total: valorTotal,
-      status: StatusPedido.Pendente,
-      observacoes: dto.observacoes ?? null,
-    })
-    .select()
-    .single();
+  // Criar pedido + itens em uma única transação atômica via RPC.
+  // Se qualquer INSERT falhar, o Postgres desfaz TUDO automaticamente —
+  // sem risco de "pedidos fantasma" deixados para trás.
+  const { data: pedidoId, error: rpcError } = await supabase.rpc('criar_pedido_atomico', {
+    p_cliente_id: dto.clienteId,
+    p_data_entrega: dto.dataEntrega ?? null,
+    p_valor_total: valorTotal,
+    p_status: StatusPedido.Pendente,
+    p_observacoes: dto.observacoes ?? null,
+    p_itens: itensParaInserir.map((item) => ({
+      produto_id: item.produto_id,
+      quantidade: item.quantidade,
+      preco_unitario_snapshot: item.preco_unitario_snapshot,
+    })),
+  });
 
-  if (pedidoError) throw new Error(pedidoError.message);
-
-  // Inserir itens vinculados ao pedido
-  const itensComPedidoId = itensParaInserir.map((item) => ({
-    ...item,
-    pedido_id: pedidoCriado.id,
-  }));
-
-  const { error: itensError } = await supabase
-    .from('itens_pedido')
-    .insert(itensComPedidoId);
-
-  if (itensError) {
-    // Rollback: remove o pedido se os itens falharem
-    await supabase.from('pedidos').delete().eq('id', pedidoCriado.id);
-    throw new Error(itensError.message);
-  }
+  if (rpcError) throw new Error(rpcError.message);
 
   // Recarregar com relações
-  const pedido = await obterPorIdAsync(pedidoCriado.id);
+  const pedido = await obterPorIdAsync(pedidoId as number);
   return { pedido, erros: null };
 }
 
