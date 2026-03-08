@@ -40,6 +40,7 @@ export async function loginAsync(dto: LoginDto): Promise<LoginResponseDto | null
     .select('id, nome, email, senha_hash, perfil, ativo')
     .eq('email', dto.email)
     .eq('ativo', true)
+    .is('deleted_at', null)
     .single();
 
   if (error || !usuario) return null;

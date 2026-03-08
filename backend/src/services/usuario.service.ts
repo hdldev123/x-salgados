@@ -29,6 +29,7 @@ export async function obterTodosAsync(
   const { data, count, error } = await supabase
     .from('usuarios')
     .select('id, nome, email, perfil, data_criacao, ativo', { count: 'exact' })
+    .is('deleted_at', null)
     .order('data_criacao', { ascending: false })
     .range(
       (paginacao.pagina - 1) * paginacao.tamanhoPagina,
@@ -47,6 +48,7 @@ export async function obterPorIdAsync(id: number): Promise<UsuarioDto | null> {
     .from('usuarios')
     .select('id, nome, email, perfil, data_criacao, ativo')
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (error || !data) return null;
@@ -56,10 +58,13 @@ export async function obterPorIdAsync(id: number): Promise<UsuarioDto | null> {
 // ─── Criar ───────────────────────────────────────────────────────────
 export async function criarAsync(dto: CriarUsuarioDto): Promise<UsuarioDto> {
   // Validação de email único
+  // Só bloqueia e-mails em uso por usuários ativos (não deletados).
+  // Permite reutilizar o e-mail de um usuário que foi soft-deletado.
   const { data: existente } = await supabase
     .from('usuarios')
     .select('id')
     .eq('email', dto.email)
+    .is('deleted_at', null)
     .maybeSingle();
 
   if (existente) {
@@ -98,6 +103,7 @@ export async function atualizarAsync(
       ativo: dto.ativo,
     })
     .eq('id', id)
+    .is('deleted_at', null)
     .select('id, nome, email, perfil, data_criacao, ativo')
     .single();
 
@@ -105,7 +111,10 @@ export async function atualizarAsync(
   return mapToDto(data);
 }
 
-// ─── Excluir (com proteção contra auto-exclusão) ─────────────────────
+// ─── Excluir — Soft Delete (com proteção contra auto-exclusão) ───────
+// Não apaga o registro fisicamente. Marca deleted_at + desativa a conta.
+// Isso preserva o histórico de pedidos vinculados ao usuário e permite
+// auditoria completa conforme exigido pela LGPD.
 export async function excluirAsync(id: number, usuarioLogadoId: number): Promise<boolean> {
   if (id === usuarioLogadoId) {
     throw new InvalidOperationError('Você não pode excluir a si mesmo.');
@@ -113,8 +122,12 @@ export async function excluirAsync(id: number, usuarioLogadoId: number): Promise
 
   const { data, error } = await supabase
     .from('usuarios')
-    .delete()
+    .update({
+      deleted_at: new Date().toISOString(),
+      ativo: false,
+    })
     .eq('id', id)
+    .is('deleted_at', null) // Idempotente: não re-deleta quem já foi deletado
     .select('id')
     .single();
 
@@ -128,6 +141,7 @@ export async function alterarSenhaAsync(id: number, dto: AlterarSenhaDto): Promi
     .from('usuarios')
     .select('id, senha_hash')
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (error || !usuario) return false;
