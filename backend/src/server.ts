@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
 import { testarConexao } from './config/database';
 import routes from './routes';
 import { errorHandler } from './middlewares/error.middleware';
@@ -11,8 +12,45 @@ dotenv.config();
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000');
 
-// ─── Middlewares Globais ─────────────────────────────────────────────
+// ─── Middlewares de Segurança ─────────────────────────────────────────
+// helmet adiciona headers HTTP de segurança: X-Frame-Options, HSTS,
+// X-Content-Type-Options, Referrer-Policy, Content-Security-Policy, etc.
+//
+// SEC-006 (mitigação): enquanto o token JWT ainda vive no localStorage,
+// a CSP abaixo reduz drasticamente a superfície de ataque XSS ao:
+//   • Bloquear scripts inline (script-src 'self')
+//   • Restringir de onde JS, CSS e imagens podem ser carregados
+//   • Proibir plugins (object-src 'none')
+//   • Bloquear redirecionamentos de base URL (base-uri 'self')
+//
+// TODO (Sprint futuro): migrar para cookies HttpOnly + CSRF token
+// e remover a dependência de segurança crítica do localStorage.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // necessário para React inline styles
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'", ...(process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) ?? [])],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+      },
+    },
+    // HSTS: força HTTPS por 1 ano (ativar só em produção com HTTPS real)
+    strictTransportSecurity: process.env.NODE_ENV === 'production'
+      ? { maxAge: 31536000, includeSubDomains: true }
+      : false,
+  }),
+);
+
 app.use(express.json());
+
 
 // CORS — equivale ao AddCors / UseCors("AllowFrontend") do .NET
 const corsOrigins = process.env.CORS_ORIGINS
