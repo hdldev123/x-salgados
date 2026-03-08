@@ -14,39 +14,84 @@ import {
 
 /** Número WhatsApp do administrador que recebe as notificações de pedido */
 const ADMIN_JID = '5532999269379@s.whatsapp.net';
-// ─── Cache telefone → remoteJid ──────────────────────────────────
+
+// ─── Persistência de JID (banco de dados) ────────────────────────────
 
 /**
- * Cache em memória que mapeia o telefone normalizado do cliente
- * para o remoteJid real usado pelo Baileys (pode ser @lid ou @s.whatsapp.net).
- *
- * É preenchido automaticamente toda vez que o cliente envia uma mensagem.
- * Usado para envio de notificações prolátivas sem depender de construir
- * o JID a partir do telefone (o que falha para contas com @lid).
+ * Salva o JID (@s.whatsapp.net) e LID (@lid) na tabela clientes.
+ * Chamado sempre que uma mensagem válida é recebida.
  */
-const jidCache = new Map<string, string>();
+async function salvarJidCliente(
+    telefoneLimpo: string,
+    whatsappJid: string | null,
+    whatsappLid: string | null,
+): Promise<void> {
+    const updates: Record<string, string | null> = {};
+    if (whatsappJid) updates.whatsapp_jid = whatsappJid;
+    if (whatsappLid) updates.whatsapp_lid = whatsappLid;
+    if (Object.keys(updates).length === 0) return;
 
-/**
- * Registra ou atualiza o remoteJid de um cliente no cache.
- * Deve ser chamado sempre que uma mensagem válida for recebida.
- */
-function registrarJid(telefoneLimpo: string, remoteJid: string): void {
-    jidCache.set(telefoneLimpo, remoteJid);
+    const { error } = await supabase
+        .from('clientes')
+        .update(updates)
+        .eq('telefone', telefoneLimpo);
+
+    if (error) {
+        // Tenta com 55+telefone (formato alternativo no banco)
+        await supabase
+            .from('clientes')
+            .update(updates)
+            .eq('telefone', `55${telefoneLimpo}`);
+    }
 }
 
 /**
- * Resolve o JID de envio para um telefone.
- * Prioriza o cache (JID real que o Baileys usa) e cai de volta
- * para a construção clássica @s.whatsapp.net como fallback.
+ * Resolve o JID de envio para um telefone, consultando o banco.
+ * Prioriza whatsapp_jid persistido e cai de volta para construção padrão.
  */
-function resolverJid(telefoneLimpo: string): string {
-    if (jidCache.has(telefoneLimpo)) {
-        return jidCache.get(telefoneLimpo)!;
+async function resolverJid(telefoneLimpo: string): Promise<string> {
+    // Buscar JID persistido no banco
+    const { data } = await supabase
+        .from('clientes')
+        .select('whatsapp_jid')
+        .or(`telefone.eq.${telefoneLimpo},telefone.eq.55${telefoneLimpo}`)
+        .not('whatsapp_jid', 'is', null)
+        .limit(1)
+        .maybeSingle();
+
+    if (data?.whatsapp_jid) {
+        return data.whatsapp_jid;
     }
+
     // Fallback: construir JID a partir do número
     const digits = telefoneLimpo.replace(/\D/g, '');
     const withCountry = digits.length <= 11 ? `55${digits}` : digits;
     return `${withCountry}@s.whatsapp.net`;
+}
+
+// ─── Log de Mensagens (auditoria) ────────────────────────────────────
+
+/**
+ * Grava uma mensagem na tabela whatsapp_mensagens para auditoria.
+ */
+async function logarMensagem(
+    clienteId: number | null,
+    remoteJid: string,
+    texto: string,
+    direcao: 'INBOUND' | 'OUTBOUND',
+): Promise<void> {
+    const { error } = await supabase
+        .from('whatsapp_mensagens')
+        .insert({
+            cliente_id: clienteId,
+            remote_jid: remoteJid,
+            texto,
+            direcao,
+        });
+
+    if (error) {
+        console.error('[WhatsApp] Erro ao logar mensagem:', error.message);
+    }
 }
 // ─── Tipos internos ──────────────────────────────────────────────────
 
@@ -286,7 +331,7 @@ export async function notificarClienteStatusPedido(pedido: PedidoDto): Promise<v
     // Usa o cache de JID real (preenchido quando o cliente enviou mensagem anterior).
     // Se o cliente nunca enviou mensagem, cai no fallback @s.whatsapp.net.
     const telefoneLimpo = limparTelefone(pedido.clienteTelefone);
-    const jid = resolverJid(telefoneLimpo);
+    const jid = await resolverJid(telefoneLimpo);
 
     const statusLabel = labelStatusParaCliente(pedido.statusEnum);
     const complemento = obterMensagemComplementarStatus(pedido.statusEnum);
@@ -377,13 +422,13 @@ async function processarOnboarding(
     nomeContato: string,
     telefoneLimpo: string,
 ): Promise<any | null> {
-    const estado = obterEstado(remoteJid);
+    const estado = await obterEstado(telefoneLimpo);
     const etapaAtual = estado?.etapa ?? EtapaConversa.INICIAL;
 
     switch (etapaAtual) {
         // ── Primeiro contato: pedir o nome
         case EtapaConversa.INICIAL: {
-            definirEstado(remoteJid, EtapaConversa.AGUARDANDO_NOME);
+            await definirEstado(telefoneLimpo, EtapaConversa.AGUARDANDO_NOME);
 
             await enviarMensagem(
                 remoteJid,
@@ -408,7 +453,7 @@ async function processarOnboarding(
                 return null;
             }
 
-            definirEstado(remoteJid, EtapaConversa.AGUARDANDO_ENDERECO, { nome });
+            definirEstado(telefoneLimpo, EtapaConversa.AGUARDANDO_ENDERECO, { nome });
 
             await enviarMensagem(
                 remoteJid,
@@ -437,7 +482,7 @@ async function processarOnboarding(
 
             if (!novoCliente) {
                 // Falha no banco — limpar estado para não prender o usuário
-                limparEstado(remoteJid);
+                await limparEstado(telefoneLimpo);
                 await enviarMensagem(
                     remoteJid,
                     `Desculpe, tivemos um problema técnico ao salvar seu cadastro. 😔\n` +
@@ -447,7 +492,7 @@ async function processarOnboarding(
             }
 
             // Onboarding concluído — limpar estado
-            limparEstado(remoteJid);
+            await limparEstado(telefoneLimpo);
 
             await enviarMensagem(
                 remoteJid,
@@ -461,7 +506,7 @@ async function processarOnboarding(
         }
 
         default:
-            limparEstado(remoteJid);
+            await limparEstado(telefoneLimpo);
             return null;
     }
 }
@@ -513,12 +558,11 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
             return;
         }
 
-        // ── 2a. Registrar mapeamento telefone → JID de envio (para notificações futuras)
-        //    Preferir o JID @s.whatsapp.net resolvido (entregável) ao @lid original.
-        const jidParaCache = phoneJidResolvido.endsWith('@s.whatsapp.net')
-            ? phoneJidResolvido
-            : remoteJid;
-        registrarJid(telefoneLimpo, jidParaCache);
+        // ── 2a. Persistir JIDs no banco (para sobreviver a reinicializações)
+        const whatsappJid = phoneJidResolvido.endsWith('@s.whatsapp.net') ? phoneJidResolvido : null;
+        const whatsappLid = remoteJid.endsWith('@lid') ? remoteJid : null;
+        // Fire-and-forget — não bloqueia o fluxo
+        salvarJidCliente(telefoneLimpo, whatsappJid, whatsappLid).catch(() => {});
 
         // ── 2b. Se o @lid foi resolvido e o cliente tem telefone errado no banco, corrigir
         if (phoneJidResolvido !== phoneJid) {
@@ -535,7 +579,7 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         }
 
         // ── 3. Verificar se há onboarding em andamento
-        const estadoAtual = obterEstado(remoteJid);
+        const estadoAtual = await obterEstado(telefoneLimpo);
 
         if (estadoAtual) {
             // Cliente está no meio do cadastro — processar onboarding
@@ -543,11 +587,14 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
 
             if (!clienteOnboarding) {
                 // Onboarding ainda em andamento; aguardando próxima resposta
+                // Logar mensagem inbound sem clienteId (ainda não cadastrado)
+                logarMensagem(null, remoteJid, texto, 'INBOUND').catch(() => {});
                 return;
             }
 
             // Onboarding acabou de ser concluído, mas a mensagem atual era o endereço.
             // O próximo texto do cliente será o pedido de fato.
+            logarMensagem(clienteOnboarding.id, remoteJid, texto, 'INBOUND').catch(() => {});
             return;
         }
 
@@ -557,10 +604,14 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         // ── 5. Cliente não existe → iniciar onboarding
         if (!cliente) {
             await processarOnboarding(remoteJid, texto, nomeContato, telefoneLimpo);
+            logarMensagem(null, remoteJid, texto, 'INBOUND').catch(() => {});
             return;
         }
 
         console.log(`[WhatsApp] Cliente encontrado: ${cliente.nome} (ID: ${cliente.id})`);
+
+        // Logar mensagem inbound
+        logarMensagem(cliente.id, remoteJid, texto, 'INBOUND').catch(() => {});
 
         // ── 6. Verificar se já existe um pedido ativo para este cliente
         const pedidoAtivo = await buscarPedidoAtivo(cliente.id);
