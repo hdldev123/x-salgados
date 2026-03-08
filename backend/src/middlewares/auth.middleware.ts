@@ -75,3 +75,43 @@ export function authorize(...perfisPermitidos: string[]) {
     next();
   };
 }
+
+/**
+ * Middleware de autenticação para o webhook do WhatsApp.
+ *
+ * Aceita o token via:
+ *   - Header:       x-webhook-token: <token>
+ *   - Query string: ?token=<token>  (fallback para plataformas que não suportam headers)
+ *
+ * O token é definido em WHATSAPP_WEBHOOK_TOKEN no .env.
+ * Se a variável não estiver configurada o servidor responde 500 (fail-closed):
+ * o endpoint nunca fica aberto por acidente.
+ */
+export function authenticateWebhook(req: Request, res: Response, next: NextFunction): void {
+  const tokenEsperado = process.env.WHATSAPP_WEBHOOK_TOKEN;
+
+  if (!tokenEsperado) {
+    console.error('[Webhook] WHATSAPP_WEBHOOK_TOKEN não configurado no .env — endpoint bloqueado.');
+    res.status(500).json({
+      sucesso: false,
+      mensagem: 'Webhook não configurado no servidor.',
+    });
+    return;
+  }
+
+  const tokenRecebido =
+    (req.headers['x-webhook-token'] as string | undefined) ??
+    (req.query.token as string | undefined);
+
+  if (!tokenRecebido || tokenRecebido !== tokenEsperado) {
+    const ip = req.ip ?? req.socket.remoteAddress ?? 'desconhecido';
+    console.warn(`[Webhook] Acesso negado — token inválido ou ausente. IP: ${ip}`);
+    res.status(401).json({
+      sucesso: false,
+      mensagem: 'Token de webhook inválido.',
+    });
+    return;
+  }
+
+  next();
+}

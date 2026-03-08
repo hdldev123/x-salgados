@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, authorize, authenticateWebhook } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 
 // Schemas Zod
@@ -269,8 +269,8 @@ router.get(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
-// WHATSAPP WEBHOOK — Público (protegido por token de webhook)
+// WHATSAPP WEBHOOK — Validado por token (WHATSAPP_WEBHOOK_TOKEN no .env)
 // ═══════════════════════════════════════════════════════════════════════
-router.post('/api/whatsapp/webhook', whatsappController.receberWebhook);
+router.post('/api/whatsapp/webhook', authenticateWebhook, whatsappController.receberWebhook);
 
 export default router;
