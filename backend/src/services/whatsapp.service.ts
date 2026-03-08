@@ -782,9 +782,7 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         }
 
         // ── 7. Sem pedido ativo → verificar se está aguardando o texto do pedido
-        const estadoPedido = await obterEstado(telefoneLimpo);
-
-        if (estadoPedido?.etapa === EtapaConversa.AGUARDANDO_PEDIDO) {
+        if (estadoAtual?.etapa === EtapaConversa.AGUARDANDO_PEDIDO) {
             // Cliente já foi saudado, esta mensagem é o pedido
             await limparEstado(telefoneLimpo);
             await criarPedidoPlaceholder(cliente, texto, remoteJid);
