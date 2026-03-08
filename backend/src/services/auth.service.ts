@@ -37,7 +37,7 @@ const BCRYPT_ROUNDS = 12;
 export async function loginAsync(dto: LoginDto): Promise<LoginResponseDto | null> {
   const { data: usuario, error } = await supabase
     .from('usuarios')
-    .select('*')
+    .select('id, nome, email, senha_hash, perfil, ativo')
     .eq('email', dto.email)
     .eq('ativo', true)
     .single();

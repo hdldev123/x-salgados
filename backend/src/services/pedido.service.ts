@@ -122,7 +122,7 @@ export async function criarAsync(
   const produtoIds = dto.itens.map((i) => i.produtoId);
   const { data: produtos, error: produtoError } = await supabase
     .from('produtos')
-    .select('*')
+    .select('id, nome, preco, ativo')
     .in('id', produtoIds);
 
   if (produtoError) throw new Error(produtoError.message);

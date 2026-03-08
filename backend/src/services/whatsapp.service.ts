@@ -272,7 +272,7 @@ async function buscarClientePorTelefone(telefoneLimpo: string, whatsappLid?: str
 
     const { data, error } = await supabase
         .from('clientes')
-        .select('*')
+        .select('id, nome, telefone, endereco, whatsapp_jid, whatsapp_lid')
         .or(filtros)
         .limit(1)
         .maybeSingle();
