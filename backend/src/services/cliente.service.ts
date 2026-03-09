@@ -131,12 +131,16 @@ export async function excluirAsync(
   }
 
   // Verificar se tem pedidos vinculados
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from('pedidos')
     .select('id', { count: 'exact', head: true })
     .eq('cliente_id', id);
 
-  if (count && count > 0) {
+  if (countError) {
+    throw new Error(`Erro ao verificar pedidos: ${countError.message}`);
+  }
+
+  if (count !== null && count > 0) {
     return {
       sucesso: false,
       mensagemErro: 'Não é possível excluir o cliente pois existem pedidos vinculados.',
