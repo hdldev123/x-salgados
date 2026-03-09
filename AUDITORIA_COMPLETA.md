@@ -21,7 +21,7 @@
 
 ## 🔴 Time de Segurança (SEC)
 
-### SEC-001 — CRÍTICO | Credenciais Reais Expostas no Repositório
+### SEC-001 — CRÍTICO | ✅ [FEITO] Credenciais Reais Expostas no Repositório
 
 **Arquivo:** `backend/.env`  
 **Linha:** 1, 2, 3
@@ -37,7 +37,7 @@
 
 ---
 
-### SEC-002 — CRÍTICO | JWT Secret é um Token JWT (não uma chave segura)
+### SEC-002 — CRÍTICO | ✅ [FEITO] JWT Secret é um Token JWT (não uma chave segura)
 
 **Arquivo:** `backend/.env`, linha 3  
 **Arquivo:** `backend/src/services/auth.service.ts`, linha 74
@@ -53,7 +53,7 @@ Resultado: uma string hexadecimal de 128 caracteres. Usar esse valor no `.env`.
 
 ---
 
-### SEC-003 — ALTO | Endpoint de Login sem Rate Limiting
+### SEC-003 — ALTO | ✅ [FEITO] Endpoint de Login sem Rate Limiting
 
 **Arquivo:** `backend/src/routes/index.ts`, linha 28
 
@@ -83,7 +83,7 @@ router.post('/api/auth/login', loginLimiter, validate(LoginSchema), authControll
 
 ---
 
-### SEC-004 — ALTO | Webhook WhatsApp Sem Autenticação
+### SEC-004 — ALTO | ✅ [FEITO] Webhook WhatsApp Sem Autenticação
 
 **Arquivo:** `backend/src/routes/index.ts`, linha 257
 
@@ -113,7 +113,7 @@ router.post('/api/whatsapp/webhook', validarTokenWebhook, whatsappController.rec
 
 ---
 
-### SEC-005 — ALTO | Número de Telefone do Admin Hardcoded no Código
+### SEC-005 — ALTO | ✅ [FEITO] Número de Telefone do Admin Hardcoded no Código
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linha 16
 
@@ -134,7 +134,7 @@ if (!ADMIN_JID) {
 
 ---
 
-### SEC-006 — MÉDIO | Token JWT Armazenado no `localStorage`
+### SEC-006 — MÉDIO | ❌ [PENDENTE] Token JWT Armazenado no `localStorage`
 
 **Arquivo:** `frontend/src/servicos/api.js`, linha 20
 
@@ -153,7 +153,7 @@ Migrar para cookies `HttpOnly` requer mudanças no backend (endpoint de logout, 
 
 ---
 
-### SEC-007 — MÉDIO | Headers de Segurança HTTP Ausentes
+### SEC-007 — MÉDIO | ✅ [FEITO] Headers de Segurança HTTP Ausentes
 
 **Arquivo:** `backend/src/server.ts`
 
@@ -170,7 +170,7 @@ app.use(helmet());
 
 ---
 
-### SEC-008 — BAIXO | `console.log` Pode Vazar Dados Sensíveis em Produção
+### SEC-008 — BAIXO | ❌ [PENDENTE] `console.log` Pode Vazar Dados Sensíveis em Produção
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linha 657
 
@@ -193,7 +193,7 @@ const logger = pino({
 
 ## 🟠 Time de Infraestrutura (INFRA)
 
-### INFRA-001 — ALTO | Ausência de Dockerfile e Orquestração
+### INFRA-001 — ALTO | ❌ [PENDENTE] Ausência de Dockerfile e Orquestração
 
 **Problema:** Não existe `Dockerfile`, `docker-compose.yml` ou qualquer configuração de containerização. O deploy em produção é manual e não reproduzível. Não há separação de ambientes (dev/staging/prod).
 
@@ -227,7 +227,7 @@ services:
 
 ---
 
-### INFRA-002 — ALTO | Nenhum Script de Build ou Deploy
+### INFRA-002 — ALTO | ❌ [PENDENTE] Nenhum Script de Build ou Deploy
 
 **Arquivo:** `backend/package.json`, scripts
 
@@ -254,7 +254,7 @@ services:
 
 ---
 
-### INFRA-003 — MÉDIO | Arquivo `auth_whatsapp/` com Sessão WhatsApp não Ignorado no Git
+### INFRA-003 — MÉDIO | ❌ [PENDENTE] Arquivo `auth_whatsapp/` com Sessão WhatsApp não Ignorado no Git
 
 **Arquivo:** `backend/.gitignore`
 
@@ -272,7 +272,7 @@ Executar: `git rm -r --cached backend/auth_whatsapp/` para remover do tracking c
 
 ---
 
-### INFRA-004 — MÉDIO | Reconexão Baileys Sem Backoff Exponencial
+### INFRA-004 — MÉDIO | ❌ [PENDENTE] Reconexão Baileys Sem Backoff Exponencial
 
 **Arquivo:** `backend/src/services/baileys.service.ts`, linhas 110-111
 
@@ -297,7 +297,7 @@ function agendarReconexao() {
 
 ---
 
-### INFRA-005 — BAIXO | Swagger Disponível Apenas em Desenvolvimento mas Carregado de Modo Inseguro
+### INFRA-005 — BAIXO | ❌ [PENDENTE] Swagger Disponível Apenas em Desenvolvimento mas Carregado de Modo Inseguro
 
 **Arquivo:** `backend/src/server.ts`, linhas 58-74
 
@@ -324,7 +324,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 ## 🟡 Time de DBA (DBA)
 
-### DBA-001 — CRÍTICO | Ausência de Transações Atômicas nas Operações Compostas
+### DBA-001 — CRÍTICO | ❌ [PENDENTE] Ausência de Transações Atômicas nas Operações Compostas
 
 **Arquivo:** `backend/src/services/pedido.service.ts`, linhas 164-193
 
@@ -387,7 +387,7 @@ const { data, error } = await supabase.rpc('criar_pedido_com_itens', {
 
 ---
 
-### DBA-002 — ALTO | Busca de Clientes Traz Todos os Registros da Tabela
+### DBA-002 — ALTO | ✅ [FEITO] Busca de Clientes Traz Todos os Registros da Tabela
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linhas 243-245
 
@@ -430,7 +430,7 @@ CREATE INDEX idx_clientes_whatsapp_lid ON clientes(whatsapp_lid);
 
 ---
 
-### DBA-003 — ALTO | Dashboard Traz Todos os Pedidos em Memória para Agrupamento
+### DBA-003 — ALTO | ❌ [PENDENTE] Dashboard Traz Todos os Pedidos em Memória para Agrupamento
 
 **Arquivo:** `backend/src/services/dashboard.service.ts`, linhas 69-93
 
@@ -470,7 +470,7 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-### DBA-004 — MÉDIO | Sem Índices nas Colunas de Filtro Mais Usadas
+### DBA-004 — MÉDIO | ❌ [PENDENTE] Sem Índices nas Colunas de Filtro Mais Usadas
 
 **Arquivo:** `backend/src/services/pedido.service.ts` — filtros por `status`, `cliente_id`, `data_criacao`
 
@@ -488,7 +488,7 @@ CREATE INDEX idx_itens_pedido_produto_id ON itens_pedido(produto_id);
 
 ---
 
-### DBA-005 — MÉDIO | Campo `select('*')` em Múltiplos Lugares sem Necessidade
+### DBA-005 — MÉDIO | ✅ [FEITO] Campo `select('*')` em Múltiplos Lugares sem Necessidade
 
 **Problemas em:** `pedido.service.ts` L95, `whatsapp.service.ts` L243, `baileys.service.ts` internamente
 
@@ -504,7 +504,7 @@ CREATE INDEX idx_itens_pedido_produto_id ON itens_pedido(produto_id);
 
 ---
 
-### DBA-006 — BAIXO | Ausência de Soft Delete e Auditoria
+### DBA-006 — BAIXO | ❌ [PENDENTE] Ausência de Soft Delete e Auditoria
 
 **Arquivo:** `backend/src/services/usuario.service.ts`, linha 114-119
 
@@ -532,7 +532,7 @@ await supabase.from('usuarios').update({ deleted_at: new Date().toISOString(), a
 
 ## 🟢 Time de QA (QA)
 
-### QA-001 — CRÍTICO | Ausência Total de Testes Automatizados
+### QA-001 — CRÍTICO | ❌ [PENDENTE] Ausência Total de Testes Automatizados
 
 **Problema:** Não existe nenhum arquivo de teste (unitário, integração ou E2E) em todo o projeto. O campo `scripts` em `package.json` não contém nenhum comando `test`.
 
@@ -589,7 +589,7 @@ describe('POST /api/auth/login', () => {
 
 ---
 
-### QA-002 — ALTO | Sem Validação no Frontend das Respostas da API
+### QA-002 — ALTO | ❌ [PENDENTE] Sem Validação no Frontend das Respostas da API
 
 **Arquivo:** `frontend/src/servicos/apiPedidos.js`, linhas 28-36
 
@@ -614,7 +614,7 @@ return {
 
 ---
 
-### QA-003 — ALTO | Tipo `any` Excessivo no Backend Impede Detectar Bugs em Tempo de Compilação
+### QA-003 — ALTO | ❌ [PENDENTE] Tipo `any` Excessivo no Backend Impede Detectar Bugs em Tempo de Compilação
 
 **Problemas em:** `pedido.service.ts` (multiple mapper functions), `whatsapp.service.ts`, `baileys.service.ts`
 
@@ -645,7 +645,7 @@ function mapToDto(pedido: PedidoBanco): PedidoDto { ... }
 
 ---
 
-### QA-004 — MÉDIO | Erros de Banco de Dados Silenciados
+### QA-004 — MÉDIO | ❌ [PENDENTE] Erros de Banco de Dados Silenciados
 
 **Arquivo:** `backend/src/services/usuario.service.ts`, linha 104
 
@@ -667,7 +667,7 @@ if (error) {
 
 ---
 
-### QA-005 — MÉDIO | Status `AGUARDANDO_PEDIDO` Causa Double-Query ao Estado
+### QA-005 — MÉDIO | ❌ [PENDENTE] Status `AGUARDANDO_PEDIDO` Causa Double-Query ao Estado
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linhas 696 e 751
 
@@ -690,7 +690,7 @@ if (estadoAtual?.etapa === EtapaConversa.AGUARDANDO_PEDIDO) { ... }
 
 ---
 
-### QA-006 — BAIXO | `console.log` no `apiLogout` do Frontend
+### QA-006 — BAIXO | ❌ [PENDENTE] `console.log` no `apiLogout` do Frontend
 
 **Arquivo:** `frontend/src/servicos/apiAutenticacao.js`, linha 27
 
@@ -712,7 +712,7 @@ export const apiLogout = () => Promise.resolve();
 
 ## 🔵 Time de PO (PO) VER E CORRIGIR ISSO DEPOIS !!!!!!!!!!!!!!!!!!
 
-### PO-001 — ALTO | Bot WhatsApp Cria Pedido "Placeholder" sem Interpretar Quantidade
+### PO-001 — ALTO | ❌ [PENDENTE] Bot WhatsApp Cria Pedido "Placeholder" sem Interpretar Quantidade
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linhas 463-515  
 
@@ -729,7 +729,7 @@ O bot recebe mensagens como "50 coxinhas e 30 risoles" mas **não interpreta as 
 
 ---
 
-### PO-002 — ALTO | Ausência de Fluxo de Cancelamento de Pedido
+### PO-002 — ALTO | ❌ [PENDENTE] Ausência de Fluxo de Cancelamento de Pedido
 
 **Arquivo:** `backend/src/routes/index.ts` — ausência de rota de cancelamento
 
@@ -742,7 +742,7 @@ O bot recebe mensagens como "50 coxinhas e 30 risoles" mas **não interpreta as 
 
 ---
 
-### PO-003 — MÉDIO | Limite de 900 Itens para Liberar Lote não é Configurável
+### PO-003 — MÉDIO | ❌ [PENDENTE] Limite de 900 Itens para Liberar Lote não é Configurável
 
 **Arquivo:** `backend/src/services/pedido.service.ts`, comentário linha 234
 
@@ -758,7 +758,7 @@ O bot recebe mensagens como "50 coxinhas e 30 risoles" mas **não interpreta as 
 
 ---
 
-### PO-004 — MÉDIO | Sem Feedback de Progresso no Onboarding WhatsApp
+### PO-004 — MÉDIO | ❌ [PENDENTE] Sem Feedback de Progresso no Onboarding WhatsApp
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linhas 541-625
 
@@ -772,7 +772,7 @@ O bot recebe mensagens como "50 coxinhas e 30 risoles" mas **não interpreta as 
 
 ## 🟣 Time de PM (PM)
 
-### PM-001 — ALTO | Versionamento da API Ausente
+### PM-001 — ALTO | ❌ [PENDENTE] Versionamento da API Ausente
 
 **Arquivo:** `backend/src/routes/index.ts`
 
@@ -787,7 +787,7 @@ app.use('/api/v1', routes); // no server.ts
 
 ---
 
-### PM-002 — MÉDIO | Nenhum Monitoramento ou Observabilidade Implementado
+### PM-002 — MÉDIO | ❌ [PENDENTE] Nenhum Monitoramento ou Observabilidade Implementado
 
 **Problema:** A aplicação não tem métricas, tracing ou alertas. Falhas em produção são descobertas pelos usuários, não pelo time de tecnologia. Não há dashboards de health, SLA ou error rate.
 
@@ -813,7 +813,7 @@ app.get('/health', async (req, res) => {
 
 ---
 
-### PM-003 — MÉDIO | Ausência de CHANGELOG e Processo de Release
+### PM-003 — MÉDIO | ❌ [PENDENTE] Ausência de CHANGELOG e Processo de Release
 
 **Problema:** Não existe `CHANGELOG.md`, nenhuma tag de versão no Git, nenhum processo documentado de release. Impossível responder "qual versão está em produção?" ou "o que mudou desde a última semana?".
 
@@ -824,7 +824,7 @@ app.get('/health', async (req, res) => {
 
 ---
 
-### PM-004 — BAIXO | Documentação Técnica Desatualizada
+### PM-004 — BAIXO | ❌ [PENDENTE] Documentação Técnica Desatualizada
 
 **Arquivo:** `backend/MIGRACAO_NODEJS.md` (30KB)
 
@@ -839,7 +839,7 @@ app.get('/health', async (req, res) => {
 
 ## ⚫ Time de Desenvolvedores Seniores (DEV)
 
-### DEV-001 — ALTO | Dependência Circular Entre Services (require() Lazy)
+### DEV-001 — ALTO | ❌ [PENDENTE] Dependência Circular Entre Services (require() Lazy)
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linhas 148-152
 
@@ -865,7 +865,7 @@ services/
 
 ---
 
-### DEV-002 — ALTO | Frontend em JavaScript Puro sem TypeScript
+### DEV-002 — ALTO | ✅ [FEITO] Frontend em JavaScript Puro sem TypeScript
 
 **Arquivos:** `frontend/src/servicos/*.js`, `frontend/src/paginas/**/*.jsx`
 
@@ -884,7 +884,7 @@ export default { resolve: { extensions: ['.tsx', '.ts', '.jsx', '.js'] } }
 
 ---
 
-### DEV-003 — ALTO | Falta de Paginação no WhatsApp Service
+### DEV-003 — ALTO | ✅ [FEITO] Falta de Paginação no WhatsApp Service
 
 **Arquivo:** `backend/src/services/whatsapp.service.ts`, linha 244
 
@@ -896,7 +896,7 @@ const { data: clientes, error } = await supabase.from('clientes').select('*');
 
 ---
 
-### DEV-004 — MÉDIO | `any` como `req as any` Contorna Type Safety do Express
+### DEV-004 — MÉDIO | ✅ [FEITO] `any` como `req as any` Contorna Type Safety do Express
 
 **Arquivo:** `backend/src/middlewares/validate.middleware.ts`, linha 16
 
@@ -914,7 +914,7 @@ Object.assign(req, { [source]: parsed });
 
 ---
 
-### DEV-005 — MÉDIO | Ausência de Variável de Ambiente no Frontend
+### DEV-005 — MÉDIO | ❌ [PENDENTE] Ausência de Variável de Ambiente no Frontend
 
 **Arquivo:** `frontend/src/servicos/api.js`, linha 5
 
@@ -940,7 +940,7 @@ if (!API_BASE_URL) {
 
 ---
 
-### DEV-006 — MÉDIO | Mapa LID↔Telefone em Memória Não Persiste Entre Restarts
+### DEV-006 — MÉDIO | ✅ [FEITO] Mapa LID↔Telefone em Memória Não Persiste Entre Restarts
 
 **Arquivo:** `backend/src/services/baileys.service.ts`, linhas 34-35
 
@@ -973,7 +973,7 @@ async function aquecerMapaLid(): Promise<void> {
 
 ---
 
-### DEV-007 — MÉDIO | Rota de Deletar Cliente Permite Exclusão com Verificação Insuficiente
+### DEV-007 — MÉDIO | ✅ [FEITO] Rota de Deletar Cliente Permite Exclusão com Verificação Insuficiente
 
 **Arquivo:** `backend/src/services/cliente.service.ts`, linhas 126-137
 
@@ -1001,7 +1001,7 @@ if (count !== null && count > 0) {
 
 ---
 
-### DEV-008 — BAIXO | Senha com Validação Fraca no DTO
+### DEV-008 — BAIXO | ❌ [PENDENTE] Senha com Validação Fraca no DTO
 
 **Arquivo:** `backend/src/dtos/usuario.dto.ts` (a verificar)
 
@@ -1020,7 +1020,7 @@ const SenhaSchema = z.string()
 
 ---
 
-### DEV-009 — BAIXO | Código de Produção com Comentários de Migração
+### DEV-009 — BAIXO | ✅ [FEITO] Código de Produção com Comentários de Migração
 
 **Múltiplos arquivos:**  
 `auth.service.ts` linha 11: `// Equivale a AuthService.LoginAsync() do C#`  
@@ -1040,30 +1040,30 @@ Remover comentários de referência ao .NET após validação da migração. Man
 
 | ID | Área | Severidade | Título |
 |---|---|---|---|
-| SEC-001 | Segurança | 🔴 CRÍTICO | Credenciais reais no repositório |
-| SEC-002 | Segurança | 🔴 CRÍTICO | JWT Key inseguro |
-| DBA-001 | DBA | 🔴 CRÍTICO | Ausência de transações atômicas |
-| QA-001 | QA | 🔴 CRÍTICO | Zero testes automatizados |
-| SEC-003 | Segurança | 🔴 ALTO | Sem rate limiting no login |
-| SEC-004 | Segurança | 🔴 ALTO | Webhook sem autenticação |
-| SEC-005 | Segurança | 🟠 ALTO | Telefone admin hardcoded |
-| DBA-002 | DBA | 🟠 ALTO | Full table scan em clientes (WhatsApp) |
-| DBA-003 | DBA | 🟠 ALTO | Dashboard processa dados em memória |
-| DEV-001 | Dev | 🟠 ALTO | Dependência circular entre services |
-| PO-001 | PO | 🟠 ALTO | Bot não interpreta pedidos |
-| PO-002 | PO | 🟠 ALTO | Sem fluxo de cancelamento |
-| PM-001 | PM | 🟠 ALTO | API sem versionamento |
-| INFRA-001 | Infra | 🟠 ALTO | Sem Docker/containerização |
-| SEC-006 | Segurança | 🟡 MÉDIO | Token em localStorage |
-| SEC-007 | Segurança | 🟡 MÉDIO | Sem headers HTTP de segurança |
-| DBA-004 | DBA | 🟡 MÉDIO | Sem índices nas colunas de filtro |
-| DEV-002 | Dev | 🟡 MÉDIO | Frontend sem TypeScript |
-| DEV-006 | Dev | 🟡 MÉDIO | Mapa LID em memória perde dados no restart |
-| QA-002 | QA | 🟡 MÉDIO | Sem validação de resposta da API no frontend |
-| QA-003 | QA | 🟡 MÉDIO | Uso excessivo de `any` |
-| PM-002 | PM | 🟡 MÉDIO | Sem monitoramento/observabilidade |
-| SEC-008 | Segurança | 🟢 BAIXO | Logs com dados pessoais |
-| DEV-009 | Dev | 🟢 BAIXO | Comentários de migração no código |
+| ✅ SEC-001 | Segurança | 🔴 CRÍTICO | Credenciais reais no repositório |
+| ✅ SEC-002 | Segurança | 🔴 CRÍTICO | JWT Key inseguro |
+| ❌ DBA-001 | DBA | 🔴 CRÍTICO | Ausência de transações atômicas |
+| ❌ QA-001 | QA | 🔴 CRÍTICO | Zero testes automatizados |
+| ✅ SEC-003 | Segurança | 🔴 ALTO | Sem rate limiting no login |
+| ✅ SEC-004 | Segurança | 🔴 ALTO | Webhook sem autenticação |
+| ✅ SEC-005 | Segurança | 🟠 ALTO | Telefone admin hardcoded |
+| ✅ DBA-002 | DBA | 🟠 ALTO | Full table scan em clientes (WhatsApp) |
+| ❌ DBA-003 | DBA | 🟠 ALTO | Dashboard processa dados em memória |
+| ❌ DEV-001 | Dev | 🟠 ALTO | Dependência circular entre services |
+| ❌ PO-001 | PO | 🟠 ALTO | Bot não interpreta pedidos |
+| ❌ PO-002 | PO | 🟠 ALTO | Sem fluxo de cancelamento |
+| ❌ PM-001 | PM | 🟠 ALTO | API sem versionamento |
+| ❌ INFRA-001 | Infra | 🟠 ALTO | Sem Docker/containerização |
+| ❌ SEC-006 | Segurança | 🟡 MÉDIO | Token em localStorage |
+| ✅ SEC-007 | Segurança | 🟡 MÉDIO | Sem headers HTTP de segurança |
+| ❌ DBA-004 | DBA | 🟡 MÉDIO | Sem índices nas colunas de filtro |
+| ✅ DEV-002 | Dev | 🟡 MÉDIO | Frontend sem TypeScript |
+| ✅ DEV-006 | Dev | 🟡 MÉDIO | Mapa LID em memória perde dados no restart |
+| ❌ QA-002 | QA | 🟡 MÉDIO | Sem validação de resposta da API no frontend |
+| ❌ QA-003 | QA | 🟡 MÉDIO | Uso excessivo de `any` |
+| ❌ PM-002 | PM | 🟡 MÉDIO | Sem monitoramento/observabilidade |
+| ❌ SEC-008 | Segurança | 🟢 BAIXO | Logs com dados pessoais |
+| ✅ DEV-009 | Dev | 🟢 BAIXO | Comentários de migração no código |
 
 ---
 
