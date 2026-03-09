@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 /**
  * Middleware global de tratamento de exceções.
  * Converte todas as exceções em respostas JSON padronizadas (ApiResponse).
- * Equivale ao ExceptionHandlingMiddleware.cs do .NET.
+
  */
 export function errorHandler(
   err: Error,

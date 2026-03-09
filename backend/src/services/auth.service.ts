@@ -39,7 +39,7 @@ const BCRYPT_ROUNDS = 12;
 
 /**
  * Realiza login e retorna JWT + dados do usuário.
- * Equivale a AuthService.LoginAsync() do C#.
+
  */
 export async function loginAsync(dto: LoginDto): Promise<LoginResponseDto | null> {
   const { data: usuario, error } = await supabase
@@ -90,7 +90,7 @@ export async function verificarSenha(senha: string, hash: string): Promise<boole
 }
 
 /**
- * Gera token JWT com claims equivalentes ao .NET.
+ * Gera token JWT.
  */
 function gerarToken(usuario: UsuarioToken): string {
   const jwtKey = process.env.JWT_KEY;

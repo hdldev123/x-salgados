@@ -4,7 +4,7 @@ import { notificarClienteStatusPedido } from '../services/whatsapp.service';
 
 /**
  * GET /api/pedidos
- * Equivale a PedidosController.ObterTodos() do C#.
+
  */
 export async function obterTodos(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -22,7 +22,7 @@ export async function obterTodos(req: Request, res: Response, next: NextFunction
 
 /**
  * GET /api/pedidos/:id
- * Equivale a PedidosController.ObterPorId() do C#.
+
  */
 export async function obterPorId(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -42,7 +42,7 @@ export async function obterPorId(req: Request, res: Response, next: NextFunction
 
 /**
  * POST /api/pedidos
- * Equivale a PedidosController.Criar() do C#.
+
  * REGRA CRÍTICA: valor total calculado pelo backend usando preços do banco.
  */
 export async function criar(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -62,7 +62,7 @@ export async function criar(req: Request, res: Response, next: NextFunction): Pr
 
 /**
  * PATCH /api/pedidos/:id/status
- * Equivale a PedidosController.AtualizarStatus() do C#.
+
  */
 export async function atualizarStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {

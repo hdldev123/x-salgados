@@ -1,4 +1,4 @@
-// Enums mapeados do C# — valores numéricos idênticos ao banco de dados
+// Valores numéricos idênticos ao banco de dados
 
 export enum PerfilUsuario {
   Administrador = 1,

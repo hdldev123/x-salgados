@@ -52,7 +52,7 @@ app.use(
 app.use(express.json());
 
 
-// CORS — equivale ao AddCors / UseCors("AllowFrontend") do .NET
+// CORS
 const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
   : ['http://localhost:3000', 'http://localhost:5173'];
@@ -78,7 +78,7 @@ app.get('/', (_req, res) => {
 app.use(routes);
 
 // ─── Middleware global de erro (deve ser o último) ───────────────────
-// Equivale ao ExceptionHandlingMiddleware do .NET
+// Middleware Global de Tratamento de Erros
 app.use(errorHandler);
 
 // ─── Inicialização ───────────────────────────────────────────────────

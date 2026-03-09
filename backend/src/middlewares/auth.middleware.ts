@@ -56,7 +56,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
 /**
  * Middleware de autorização por perfil (RBAC).
- * Equivale ao `[Authorize(Roles = "Administrador,Atendente")]` do ASP.NET.
+
  *
  * Uso: `authorize('Administrador', 'Atendente')`
  */
