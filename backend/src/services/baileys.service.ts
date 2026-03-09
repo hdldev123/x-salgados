@@ -12,9 +12,16 @@ import * as whatsappService from './whatsapp.service';
 import { WhatsAppPayload } from './whatsapp.service';
 import path from 'path';
 
-// ─── Estado Global ───────────────────────────────────────────────────
+import {
+    setSocket,
+    getSocket,
+    adicionarMapeamento,
+    getTamanhoMapaLid,
+    hasMapeamentoLid,
+    resolverLidParaTelefone
+} from './jid-resolver.service';
 
-let sock: WASocket | null = null;
+// ─── Estado Global ───────────────────────────────────────────────────
 
 /**
  * Diretório onde as credenciais de sessão do WhatsApp são salvas.
@@ -24,16 +31,6 @@ const AUTH_DIR = path.join(__dirname, '..', '..', 'auth_whatsapp');
 
 /** Logger silencioso para evitar poluir o terminal */
 const logger = pino({ level: 'silent' });
-
-/**
- * Mapeamento bidirecional LID ↔ telefone.
- *
- * Populado automaticamente pelo evento `contacts.upsert` do Baileys.
- * Necessário porque o WhatsApp envia `@lid` (Linked Identity) como
- * remoteJid, mas mensagens só podem ser ENTREGUES para `@s.whatsapp.net`.
- */
-const lidParaPhone = new Map<string, string>();
-const phoneParaLid = new Map<string, string>();
 
 // ─── Inicialização ───────────────────────────────────────────────────
 
@@ -55,12 +52,13 @@ export async function iniciarBaileys(): Promise<void> {
     const { version } = await fetchLatestBaileysVersion();
     console.log(`[Baileys] Usando versão do protocolo WA: ${version.join('.')}`);
 
-    sock = makeWASocket({
+    const sock = makeWASocket({
         auth: state,
         version,
         browser: ['X Salgados', 'Chrome', '22.0'],
         logger,
     });
+    setSocket(sock);
 
     // ── Salvar credenciais quando atualizadas
     sock.ev.on('creds.update', saveCreds);
@@ -87,15 +85,14 @@ export async function iniciarBaileys(): Promise<void> {
                 for (const c of Object.values(contatos)) {
                     const phoneJid = c?.phoneNumber || (!c?.id?.endsWith('@lid') ? c?.id : null);
                     const lidJid = c?.lid || (c?.id?.endsWith('@lid') ? c?.id : null);
-                    if (phoneJid && lidJid && !lidParaPhone.has(lidJid)) {
-                        lidParaPhone.set(lidJid, phoneJid);
-                        phoneParaLid.set(phoneJid, lidJid);
+                    if (phoneJid && lidJid && !hasMapeamentoLid(lidJid)) {
+                        adicionarMapeamento(lidJid, phoneJid);
                         novos++;
                     }
                 }
                 console.log(
                     `[Baileys] 📇 Contatos na inicialização: ${Object.keys(contatos).length} total, ` +
-                    `${novos} novos mapeamentos, ${lidParaPhone.size} LID↔telefone no mapa.`,
+                    `${novos} novos mapeamentos, ${getTamanhoMapaLid()} LID↔telefone no mapa.`,
                 );
             }, 5000);
         }
@@ -130,11 +127,10 @@ export async function iniciarBaileys(): Promise<void> {
                 || (contact.id.endsWith('@lid') ? contact.id : null);
 
             if (phoneJid && lidJid) {
-                lidParaPhone.set(lidJid, phoneJid);
-                phoneParaLid.set(phoneJid, lidJid);
+                adicionarMapeamento(lidJid, phoneJid);
             }
         }
-        console.log(`[Baileys] 📇 Contatos sincronizados: ${lidParaPhone.size} mapeamentos LID↔telefone.`);
+        console.log(`[Baileys] 📇 Contatos sincronizados: ${getTamanhoMapaLid()} mapeamentos LID↔telefone.`);
     });
 
     sock.ev.on('contacts.update', (updates) => {
@@ -146,8 +142,7 @@ export async function iniciarBaileys(): Promise<void> {
                 || (contactTyped.id?.endsWith('@lid') ? contactTyped.id : null);
 
             if (phoneJid && lidJid) {
-                lidParaPhone.set(lidJid, phoneJid);
-                phoneParaLid.set(phoneJid, lidJid);
+                adicionarMapeamento(lidJid, phoneJid);
             }
         }
     });
@@ -169,60 +164,6 @@ export async function iniciarBaileys(): Promise<void> {
 }
 
 // ─── Conversor de Formato ────────────────────────────────────────────
-
-/**
- * Resolve um JID `@lid` para o JID de telefone real (`@s.whatsapp.net`).
- *
- * Fontes de resolução (em ordem de prioridade):
- * 1. Mapa `lidParaPhone` (populado por `contacts.upsert`)
- * 2. `sock.contacts` (fallback caso o mapa esteja incompleto)
- *
- * @param lidJid - JID no formato `XXXXXXXXXX@lid`
- * @returns JID de telefone real ou o `lidJid` original se não encontrado
- */
-function resolverLidParaTelefone(lidJid: string): string {
-    if (!lidJid.endsWith('@lid')) return lidJid;
-
-    // 1. Verificar mapa de contatos (fonte principal)
-    if (lidParaPhone.has(lidJid)) {
-        const resolved = lidParaPhone.get(lidJid)!;
-        console.log(`[Baileys] @lid resolvido via mapa: ${lidJid} → ${resolved}`);
-        return resolved;
-    }
-
-    // 2. Fallback: percorrer sock.contacts
-    if (sock) {
-        const contatos = ((sock as { contacts?: Record<string, { id?: string; lid?: string; phoneNumber?: string }> }).contacts ?? {});
-        for (const c of Object.values(contatos)) {
-            const cLid: string = c?.lid ?? '';
-            const cPhone: string = c?.phoneNumber ?? '';
-            const cId: string = c?.id ?? '';
-
-            if (cLid === lidJid || cLid.split('@')[0] === lidJid.split('@')[0]) {
-                const phoneJid = cPhone || (!cId.endsWith('@lid') ? cId : null);
-                if (phoneJid) {
-                    lidParaPhone.set(lidJid, phoneJid);
-                    phoneParaLid.set(phoneJid, lidJid);
-                    console.log(`[Baileys] @lid resolvido via contatos: ${lidJid} → ${phoneJid}`);
-                    return phoneJid;
-                }
-            }
-        }
-    }
-
-    console.warn(`[Baileys] ⚠️ Não foi possível resolver @lid ${lidJid}. Contatos: ${lidParaPhone.size}`);
-    return lidJid;
-}
-
-/**
- * Converte um JID para formato entregável.
- * Se o JID é `@lid`, tenta converter para `@s.whatsapp.net`.
- * Exportada para uso pelo whatsapp.service.
- */
-export function resolverJidParaEnvio(jid: string): string {
-    if (!jid.endsWith('@lid')) return jid;
-    return resolverLidParaTelefone(jid);
-}
 
 /**
  * Converte uma mensagem raw do Baileys para o formato de payload
@@ -285,9 +226,3 @@ function baileysParaPayload(msg: proto.IWebMessageInfo): WhatsAppPayload {
     };
 }
 
-/**
- * Retorna a instância do socket para uso externo (ex: enviar mensagens).
- */
-export function getSocket(): WASocket | null {
-    return sock;
-}

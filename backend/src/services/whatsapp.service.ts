@@ -9,6 +9,7 @@ import {
     definirEstado,
     limparEstado,
 } from './bot-state.service';
+import { getSocket, resolverJidParaEnvio } from './jid-resolver.service';
 
 // ─── Constantes ──────────────────────────────────────────────────────
 
@@ -171,23 +172,14 @@ export interface PedidoAtivoBanco {
  * @param text - Conteúdo da mensagem
  */
 async function enviarMensagem(jid: string, text: string): Promise<void> {
-    // Importação lazy para evitar dependência circular com baileys.service.
-    const { getSocket, resolverJidParaEnvio } = await import('./baileys.service');
     const sock = getSocket();
     if (!sock) {
         console.warn('[WhatsApp] Socket não disponível. Mensagem não enviada para', jid);
         return;
     }
 
-    // @lid JIDs NÃO são entregáveis — converter para @s.whatsapp.net
+    // @lid JIDs NÃO são entregáveis em novos contatos — tentar converter para @s.whatsapp.net
     const jidEnvio = resolverJidParaEnvio(jid);
-
-    if (jidEnvio.endsWith('@lid')) {
-        console.warn(
-            `[WhatsApp] ⚠️ JID @lid não resolvido: ${jid}. ` +
-            `Mensagem pode não ser entregue. Aguardando sincronização de contatos.`,
-        );
-    }
 
     await sock.sendMessage(jidEnvio, { text });
     console.log(`[WhatsApp] 📤 Mensagem enviada para ${jidEnvio}${jidEnvio !== jid ? ` (lid: ${jid})` : ''}`);
@@ -696,7 +688,6 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         // ── 2. Resolver @lid e normalizar telefone
         //    Tenta resolver o @lid para @s.whatsapp.net usando o mapa de contatos.
         //    Se não conseguir, usamos o phoneJid como recebido (pode ser @lid).
-        const { resolverJidParaEnvio } = await import('./baileys.service');
         const phoneJidResolvido = resolverJidParaEnvio(phoneJid);
         const telefoneLimpo = limparTelefone(phoneJidResolvido);
 
