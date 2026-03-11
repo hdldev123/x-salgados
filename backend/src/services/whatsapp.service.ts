@@ -828,7 +828,7 @@ async function processarMenuPedidoAtivo(
             return;
         }
 
-        // ── Opção 2: Cancelar Pedido (com validação de segurança) ─
+        // ── Opção 2: Cancelar Pedido (somente se Pendente) ────────
         case '2': {
             // Re-buscar pedido para garantir integridade
             const { data: pedidoDb, error } = await supabase
@@ -860,20 +860,15 @@ async function processarMenuPedidoAtivo(
                 return;
             }
 
-            // Validar que o status ainda é ativo (1-4)
-            const statusesAtivos = [
-                StatusPedido.Pendente,
-                StatusPedido.EmProducao,
-                StatusPedido.Pronto,
-                StatusPedido.EmEntrega,
-            ];
-            if (!statusesAtivos.includes(pedidoDb.status)) {
+            // Apenas pedidos com status Pendente podem ser cancelados pelo bot
+            if (pedidoDb.status !== StatusPedido.Pendente) {
                 await limparEstado(telefoneLimpo);
                 await enviarMensagem(
                     remoteJid,
-                    `O pedido #${pedidoId} já foi finalizado e não pode ser cancelado. 🤔\n` +
-                    `Envie uma mensagem para começar um novo pedido!`,
+                    `Seu pedido já começou a ser preparado e não pode ser cancelado por aqui. ` +
+                    `Por favor, entre em contato urgente com o nosso atendente pelo e-mail rangosuporte@gmail.com.`,
                 );
+                console.log(`[WhatsApp] Cancelamento bloqueado: pedido #${pedidoId} está no status ${pedidoDb.status} (não é Pendente). Cliente ${cliente.nome}.`);
                 return;
             }
 
@@ -890,16 +885,15 @@ async function processarMenuPedidoAtivo(
             return;
         }
 
-        // ── Opção 3: Editar Pedido (MVP → direcionar para atendente) ─
+        // ── Opção 3: Editar Pedido → direcionar para e-mail de suporte ─
         case '3': {
             await limparEstado(telefoneLimpo);
             await enviarMensagem(
                 remoteJid,
-                `Para editar seu pedido #${pedidoId}, entre em contato com um de nossos atendentes. 📞\n\n` +
-                `Você pode ligar ou enviar mensagem diretamente para o número da loja.\n` +
-                `Desculpe o inconveniente! 🙏`,
+                `Para alterar itens do seu pedido, precisamos da ajuda de um humano para garantir que tudo saia perfeito! ` +
+                `Por favor, entre em contato com o nosso atendente através do e-mail rangosuporte@gmail.com.`,
             );
-            console.log(`[WhatsApp] Opção 3: Cliente ${cliente.nome} direcionado a atendente para editar pedido #${pedidoId}.`);
+            console.log(`[WhatsApp] Opção 3: Cliente ${cliente.nome} direcionado ao e-mail de suporte para editar pedido #${pedidoId}.`);
             return;
         }
 
