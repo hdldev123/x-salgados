@@ -24,12 +24,15 @@ export enum EtapaConversa {
     AGUARDANDO_NOME = 'AGUARDANDO_NOME',
     AGUARDANDO_ENDERECO = 'AGUARDANDO_ENDERECO',
     AGUARDANDO_PEDIDO = 'AGUARDANDO_PEDIDO',
+    MENU_PEDIDO_ATIVO = 'MENU_PEDIDO_ATIVO',
 }
 
-/** Dados coletados durante o onboarding */
+/** Dados coletados durante o onboarding / sessão */
 export interface DadosOnboarding {
     nome?: string;
     endereco?: string;
+    /** ID do pedido ativo — usado pelo menu interativo */
+    pedidoAtivoId?: number;
 }
 
 /** Estado completo de uma conversa */
