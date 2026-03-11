@@ -16,7 +16,11 @@ function ListagemPedidosCancelados() {
       const resultado = await buscarPedidos({ status: 6, tamanhoPagina: 200 });
       setPedidos(resultado.dados || []);
     } catch (err: any) {
-      setErro('Erro ao carregar pedidos cancelados.');
+      if (err.mensagem) {
+        setErro(err.mensagem);
+      } else {
+        setErro('Erro ao carregar pedidos cancelados.');
+      }
     } finally {
       setCarregando(false);
     }

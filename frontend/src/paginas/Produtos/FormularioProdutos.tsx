@@ -16,7 +16,10 @@ function FormularioProduto({ produto, aoSalvar }: FormularioProdutoProps) {
     ativo: true,
   });
 
+  const [erro, setErro] = useState<string | null>(null);
+
   useEffect(() => {
+    setErro(null);
     if (produto) {
       setFormData({
         nome: produto.nome || '',
@@ -40,6 +43,7 @@ function FormularioProduto({ produto, aoSalvar }: FormularioProdutoProps) {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErro(null);
     try {
       if (produto) {
         await atualizarProduto(produto.id, formData);
@@ -47,8 +51,8 @@ function FormularioProduto({ produto, aoSalvar }: FormularioProdutoProps) {
         await criarProduto(formData);
       }
       aoSalvar();
-    } catch (error) {
-      // Ignora erro no console para não vazar objeto de request
+    } catch (error: any) {
+      setErro(error.mensagem || 'Erro ao salvar produto.');
     }
   };
 
@@ -83,13 +87,20 @@ function FormularioProduto({ produto, aoSalvar }: FormularioProdutoProps) {
         />
         <label htmlFor="ativo" className="text-sm font-medium text-grafite-700">Produto ativo</label>
       </div>
-      <div className="mt-6 flex justify-end border-t border-grafite-200 pt-4">
-        <button
-          type="submit"
-          className="rounded-xl bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-500/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-xl active:translate-y-0"
-        >
-          {produto ? 'Atualizar' : 'Salvar'}
-        </button>
+      <div className="mt-6 flex flex-col gap-4 border-t border-grafite-200 pt-4">
+        {erro && (
+          <div className="rounded-xl border border-erro/20 bg-erro/10 px-4 py-3 text-sm font-medium text-erro">
+            {erro}
+          </div>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            className="rounded-xl bg-primary-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-500/25 transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-xl active:translate-y-0"
+          >
+            {produto ? 'Atualizar' : 'Salvar'}
+          </button>
+        </div>
       </div>
     </form>
   );

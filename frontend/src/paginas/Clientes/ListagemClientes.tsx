@@ -66,8 +66,12 @@ function ListagemClientes() {
       await deletarCliente(clienteParaExcluir.id);
       fecharModalExcluir();
       carregarClientes();
-    } catch (error) {
-      setErro("Falha ao excluir o cliente.");
+    } catch (error: any) {
+      if (error.mensagem) {
+        setErro(error.mensagem);
+      } else {
+        setErro("Falha ao excluir o cliente.");
+      }
     }
   }
 

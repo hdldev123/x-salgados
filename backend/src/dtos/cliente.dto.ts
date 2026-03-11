@@ -13,7 +13,7 @@ export const CriarClienteSchema = z.object({
   email: z
     .string()
     .email('Email inválido')
-    .max(150, 'Email deve ter no máximo 150 caracteres')
+    .or(z.literal(''))
     .nullish(),
   endereco: z
     .string()
