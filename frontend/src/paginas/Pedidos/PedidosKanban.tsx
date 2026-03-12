@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Pedido, Cliente } from '../../types';
+import Modal from '../../componentes/Modal/Modal';
 
 interface StatusConfigItem {
   label: string;
@@ -56,6 +57,7 @@ interface PedidosKanbanProps {
 function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanbanProps) {
   const [pedidosAtualizados, setPedidosAtualizados] = useState<Pedido[]>(pedidos);
   const [pedidoAtualizando, setPedidoAtualizando] = useState<number | null>(null);
+  const [pedidoParaCancelar, setPedidoParaCancelar] = useState<Pedido | null>(null);
 
   // Sincronizar com props quando pedidos mudam
   useEffect(() => {
@@ -148,6 +150,10 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanban
           if (novoStatus === 'EM_PRODUCAO') {
             novoStatus = 'EM_PREPARO';
           }
+          if (novoStatus === 'CANCELADO') {
+            setPedidoParaCancelar(pedido);
+            return;
+          }
           handleStatusChange(pedido.id, novoStatus);
         }}
         disabled={pedidoAtualizando === pedido.id}
@@ -158,6 +164,7 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanban
         <option value="PRONTO">Pronto</option>
         <option value="A_CAMINHO">Em Trânsito</option>
         <option value="ENTREGUE">Concluído</option>
+        <option value="CANCELADO" style={{ color: '#dc2626' }}>❌ Cancelar</option>
       </select>
     </div>
   );
@@ -252,6 +259,42 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanban
             </div>
           ))}
       </div>
+
+      {/* Modal de confirmação de cancelamento */}
+      <Modal
+        estaAberto={!!pedidoParaCancelar}
+        aoFechar={() => setPedidoParaCancelar(null)}
+        titulo="Cancelar Pedido"
+      >
+        <div>
+          <p className="text-sm text-grafite-600">
+            Tem certeza que deseja cancelar o pedido{' '}
+            <strong className="text-grafite-800">#{pedidoParaCancelar?.id}</strong>?
+          </p>
+          <p className="mt-2 text-xs text-grafite-400">
+            Esta ação não pode ser desfeita. O pedido será movido para a lista de cancelados.
+          </p>
+          <div className="mt-6 flex justify-end gap-3 border-t border-grafite-200 pt-4">
+            <button
+              className="rounded-xl border border-grafite-300 px-5 py-2 text-sm font-medium text-grafite-600 transition-colors hover:bg-grafite-50"
+              onClick={() => setPedidoParaCancelar(null)}
+            >
+              Voltar
+            </button>
+            <button
+              className="rounded-xl bg-erro px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-red-700"
+              onClick={() => {
+                if (pedidoParaCancelar) {
+                  handleStatusChange(pedidoParaCancelar.id, 'CANCELADO');
+                  setPedidoParaCancelar(null);
+                }
+              }}
+            >
+              Confirmar Cancelamento
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

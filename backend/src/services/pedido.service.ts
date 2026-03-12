@@ -275,17 +275,24 @@ export async function obterLoteEntregaAsync(): Promise<LoteEntregaDto> {
 
   if (error) throw new Error(error.message);
 
-  const pedidosMapeados = (pedidos || []).map(mapToDto);
+  // Mapear para DTO e injetar totalItens por pedido (Null Safety via ?.)
+  const pedidosProntos = (pedidos || []).map((pedidoRaw: any) => {
+    const dto = mapToDto(pedidoRaw);
+    dto.totalItens = (pedidoRaw.itens_pedido || []).reduce(
+      (sum: number, item: ItemPedidoBanco) => sum + item.quantidade, 0
+    );
+    return dto;
+  });
 
   // Somar TODAS as quantidades de itens de todos os pedidos prontos
-  const totalItensAcumulados = (pedidos || []).reduce((acc, pedido) => {
+  const totalLote = (pedidos || []).reduce((acc, pedido) => {
     const itensPedido = pedido.itens_pedido || [];
     return acc + itensPedido.reduce((sum: number, item: ItemPedidoBanco) => sum + item.quantidade, 0);
   }, 0);
 
   return {
-    pedidosProntos: pedidosMapeados,
-    totalItensAcumulados,
+    pedidosProntos,
+    totalLote,
   };
 }
 

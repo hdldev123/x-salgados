@@ -32,7 +32,7 @@ function Login() {
         <div className="border-b border-grafite-200 px-6 py-5 text-center">
           <img
             src="/logo.png"
-            alt="X Salgados"
+            alt="Rangô"
             className="mx-auto h-20 w-auto object-contain"
           />
         </div>

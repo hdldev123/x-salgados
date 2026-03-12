@@ -3,7 +3,7 @@ import { z } from 'zod';
 // ─── Paginação ────────────────────────────────────────────────────────
 export const PaginacaoSchema = z.object({
   pagina: z.coerce.number().int().min(1).default(1),
-  tamanhoPagina: z.coerce.number().int().min(1).max(100).default(10),
+  tamanhoPagina: z.coerce.number().int().min(1).max(200).default(10),
 }).passthrough(); // Preserva query params extras (busca, status, categoria, etc.)
 export type PaginacaoDto = z.infer<typeof PaginacaoSchema>;
 

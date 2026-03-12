@@ -130,11 +130,12 @@ export async function excluirAsync(
     return { sucesso: false, mensagemErro: 'Cliente não encontrado.' };
   }
 
-  // Verificar se tem pedidos vinculados
+  // Verificar se tem pedidos em andamento (status diferente de Entregue=5 e Cancelado=6)
   const { count, error: countError } = await supabase
     .from('pedidos')
     .select('id', { count: 'exact', head: true })
-    .eq('cliente_id', id);
+    .eq('cliente_id', id)
+    .not('status', 'in', '(5,6)');
 
   if (countError) {
     throw new Error(`Erro ao verificar pedidos: ${countError.message}`);
@@ -143,15 +144,47 @@ export async function excluirAsync(
   if (count !== null && count > 0) {
     return {
       sucesso: false,
-      mensagemErro: 'Não é possível excluir o cliente pois existem pedidos vinculados.',
+      mensagemErro: 'Não é possível excluir um cliente com pedidos em andamento. Cancele ou conclua os pedidos primeiro.',
     };
   }
 
+  // Buscar IDs dos pedidos concluídos/cancelados para remover itens primeiro
+  const { data: pedidosParaExcluir } = await supabase
+    .from('pedidos')
+    .select('id')
+    .eq('cliente_id', id)
+    .in('status', [5, 6]);
+
+  if (pedidosParaExcluir && pedidosParaExcluir.length > 0) {
+    const pedidoIds = pedidosParaExcluir.map((p: any) => p.id);
+
+    // Excluir itens dos pedidos
+    await supabase
+      .from('itens_pedido')
+      .delete()
+      .in('pedido_id', pedidoIds);
+
+    // Excluir os pedidos
+    await supabase
+      .from('pedidos')
+      .delete()
+      .in('id', pedidoIds);
+  }
+
+  // Agora excluir o cliente
   const { error } = await supabase
     .from('clientes')
     .delete()
     .eq('id', id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.code === '23503' || error.message?.includes('foreign key')) {
+      return {
+        sucesso: false,
+        mensagemErro: 'Não é possível excluir o cliente pois ainda existem registros vinculados.',
+      };
+    }
+    throw new Error(error.message);
+  }
   return { sucesso: true };
 }

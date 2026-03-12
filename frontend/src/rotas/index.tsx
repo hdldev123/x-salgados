@@ -4,6 +4,7 @@ import Login from '../paginas/Login/Login';
 import Layout from '../componentes/Layout/Layout';
 import Dashboard from '../paginas/Dashboard/Dashboard';
 import ListagemPedidos from '../paginas/Pedidos/ListagemPedidos';
+import ListagemPedidosCancelados from '../paginas/Pedidos/ListagemPedidosCancelados';
 import ListagemClientes from '../paginas/Clientes/ListagemClientes';
 import ListagemProdutos from '../paginas/Produtos/ListagemProdutos';
 import ListagemUsuarios from '../paginas/Usuarios/ListagemUsuarios';
@@ -42,6 +43,14 @@ function RotasApp() {
           element={
             <RotaProtegida papeisPermitidos={['ADMINISTRADOR', 'ATENDENTE']}>
               <ListagemPedidos />
+            </RotaProtegida>
+          } 
+        />
+        <Route 
+          path="pedidos-cancelados" 
+          element={
+            <RotaProtegida papeisPermitidos={['ADMINISTRADOR', 'ATENDENTE']}>
+              <ListagemPedidosCancelados />
             </RotaProtegida>
           } 
         />

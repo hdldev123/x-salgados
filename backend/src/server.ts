@@ -69,7 +69,7 @@ app.use(
 // ─── Health Check ────────────────────────────────────────────────────
 app.get('/', (_req, res) => {
   res.json({
-    message: 'API X Salgados - Online',
+    message: 'API Rangô - Online',
     timestamp: new Date().toISOString(),
   });
 });
@@ -101,7 +101,7 @@ app.listen(PORT, () => {
       '/api-docs',
       swaggerUi.serve,
       swaggerUi.setup(swaggerDocument, {
-        customSiteTitle: 'X Salgados API Docs',
+        customSiteTitle: 'Rangô API Docs',
         swaggerOptions: {
           persistAuthorization: true,
           filter: true,

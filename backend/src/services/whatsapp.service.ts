@@ -353,7 +353,7 @@ function obterMensagemComplementarStatus(status: StatusPedido): string {
             return 'O entregador está a caminho! Fique de olho. 🛵';
         case StatusPedido.Entregue:
             return (
-                'Pedido entregue! Obrigado por escolher a *X Salgados*! 🧡\n\n' +
+                'Pedido entregue! Obrigado por escolher a *Rangô*! 🧡\n\n' +
                 'Qualquer hora pode fazer um novo pedido. 😊'
             );
         default:
@@ -675,7 +675,7 @@ async function processarOnboarding(
 
             await enviarMensagem(
                 remoteJid,
-                `Olá! 👋 Bem-vindo(a) à *X Salgados*!\n\n` +
+                `Olá! 👋 Bem-vindo(a) à *Rangô*!\n\n` +
                 `Ainda não temos seu cadastro. Vamos resolver isso rapidinho!\n\n` +
                 `Por favor, me diga o seu *nome completo*:`,
             );
@@ -828,7 +828,7 @@ async function processarMenuPedidoAtivo(
             return;
         }
 
-        // ── Opção 2: Cancelar Pedido (com validação de segurança) ─
+        // ── Opção 2: Cancelar Pedido (somente se Pendente) ────────
         case '2': {
             // Re-buscar pedido para garantir integridade
             const { data: pedidoDb, error } = await supabase
@@ -860,20 +860,15 @@ async function processarMenuPedidoAtivo(
                 return;
             }
 
-            // Validar que o status ainda é ativo (1-4)
-            const statusesAtivos = [
-                StatusPedido.Pendente,
-                StatusPedido.EmProducao,
-                StatusPedido.Pronto,
-                StatusPedido.EmEntrega,
-            ];
-            if (!statusesAtivos.includes(pedidoDb.status)) {
+            // Apenas pedidos com status Pendente podem ser cancelados pelo bot
+            if (pedidoDb.status !== StatusPedido.Pendente) {
                 await limparEstado(telefoneLimpo);
                 await enviarMensagem(
                     remoteJid,
-                    `O pedido #${pedidoId} já foi finalizado e não pode ser cancelado. 🤔\n` +
-                    `Envie uma mensagem para começar um novo pedido!`,
+                    `Seu pedido já começou a ser preparado e não pode ser cancelado por aqui. ` +
+                    `Por favor, entre em contato urgente com o nosso atendente pelo e-mail rangosuporte@gmail.com.`,
                 );
+                console.log(`[WhatsApp] Cancelamento bloqueado: pedido #${pedidoId} está no status ${pedidoDb.status} (não é Pendente). Cliente ${cliente.nome}.`);
                 return;
             }
 
@@ -890,16 +885,15 @@ async function processarMenuPedidoAtivo(
             return;
         }
 
-        // ── Opção 3: Editar Pedido (MVP → direcionar para atendente) ─
+        // ── Opção 3: Editar Pedido → direcionar para e-mail de suporte ─
         case '3': {
             await limparEstado(telefoneLimpo);
             await enviarMensagem(
                 remoteJid,
-                `Para editar seu pedido #${pedidoId}, entre em contato com um de nossos atendentes. 📞\n\n` +
-                `Você pode ligar ou enviar mensagem diretamente para o número da loja.\n` +
-                `Desculpe o inconveniente! 🙏`,
+                `Para alterar itens do seu pedido, precisamos da ajuda de um humano para garantir que tudo saia perfeito! ` +
+                `Por favor, entre em contato com o nosso atendente através do e-mail rangosuporte@gmail.com.`,
             );
-            console.log(`[WhatsApp] Opção 3: Cliente ${cliente.nome} direcionado a atendente para editar pedido #${pedidoId}.`);
+            console.log(`[WhatsApp] Opção 3: Cliente ${cliente.nome} direcionado ao e-mail de suporte para editar pedido #${pedidoId}.`);
             return;
         }
 
@@ -1099,7 +1093,7 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
         await definirEstado(telefoneLimpo, EtapaConversa.MENU_QUANTIDADE);
         await enviarMensagem(
             remoteJid,
-            `Olá, *${cliente.nome}*! 👋 Bem-vindo(a) de volta à *X Salgados*!`,
+            `Olá, *${cliente.nome}*! 👋 Bem-vindo(a) de volta à *Rangô*!`,
         );
         await enviarMenuQuantidade(remoteJid, cliente.nome);
         console.log(`[WhatsApp] Cliente ${cliente.nome} retornou. Menu de quantidade enviado.`);

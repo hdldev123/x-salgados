@@ -102,9 +102,16 @@ async function seed() {
 
   // 2. Criar/Atualizar Produtos Base
   const produtosPadrao = [
-    { nome: 'Coxinha', preco: 1.20, ativo: true },
-    { nome: 'Risole', preco: 1.20, ativo: true },
-    { nome: 'Pastel', preco: 1.50, ativo: true },
+    { nome: 'Coxinha', categoria: 'Salgados Fritos', preco: 1.20, ativo: true },
+    { nome: 'Risole', categoria: 'Salgados Fritos', preco: 1.20, ativo: true },
+    { nome: 'Pastel', categoria: 'Salgados Fritos', preco: 1.50, ativo: true },
+    { nome: 'Empada de Frango', categoria: 'Salgados Assados', preco: 2.00, ativo: true },
+    { nome: 'Esfiha de Carne', categoria: 'Salgados Assados', preco: 1.80, ativo: true },
+    { nome: 'Bolinha de Queijo', categoria: 'Salgados Fritos', preco: 1.30, ativo: true },
+    { nome: 'Kibe', categoria: 'Salgados Fritos', preco: 1.50, ativo: true },
+    { nome: 'Enrolado de Salsicha', categoria: 'Salgados Assados', preco: 1.50, ativo: true },
+    { nome: 'Mini Pizza', categoria: 'Salgados Assados', preco: 2.50, ativo: true },
+    { nome: 'Churros', categoria: 'Doces', preco: 3.00, ativo: true },
   ];
 
   for (const prod of produtosPadrao) {

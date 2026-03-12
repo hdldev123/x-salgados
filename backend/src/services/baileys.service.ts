@@ -56,7 +56,7 @@ export async function iniciarBaileys(): Promise<void> {
     const sock = makeWASocket({
         auth: state,
         version,
-        browser: ['X Salgados', 'Chrome', '22.0'],
+        browser: ['Rangô', 'Chrome', '22.0'],
         logger,
     });
     setSocket(sock);

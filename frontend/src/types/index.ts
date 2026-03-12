@@ -1,5 +1,5 @@
 /**
- * Definições de tipos e interfaces para o frontend X Salgados.
+ * Definições de tipos e interfaces para o frontend Rangô.
  * Documenta os contratos entre frontend e backend.
  */
 

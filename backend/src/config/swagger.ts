@@ -291,10 +291,10 @@ export const swaggerDocument: OpenAPIV3.Document = {
 
   // ── Metadados da API ───────────────────────────────────────────────
   info: {
-    title: 'X Salgados API',
+    title: 'Rangô API',
     version: '1.0.0',
     description: [
-      '## API de Gestão de Pedidos — X Salgados',
+      '## API de Gestão de Pedidos — Rangô',
       '',
 
       '',
@@ -302,7 +302,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
       'A maioria dos endpoints exige um **Bearer Token JWT**.',
       'Faça login em `POST /api/auth/login` e cole o token no botão **Authorize** acima.',
     ].join('\n'),
-    contact: { name: 'Equipe X Salgados' },
+    contact: { name: 'Equipe Rangô' },
   },
 
   // ── Servidores ──────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ function ListagemClientes() {
 
   const [modalExcluirAberto, setModalExcluirAberto] = useState<boolean>(false);
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
 
   const carregarClientes = useCallback(async () => {
     setCarregando(true);
@@ -25,7 +26,7 @@ function ListagemClientes() {
       const dados = await buscarClientes();
       setClientes(dados.dados || []);
     } catch (err: any) {
-      setErro(err.message || String(err));
+      setErro(err.mensagem || err.message || String(err));
     } finally {
       setCarregando(false);
     }
@@ -47,27 +48,31 @@ function ListagemClientes() {
 
   const handleSucessoFormulario = () => {
     fecharModalFormulario();
-    carregarClientes(); // Recarrega a lista
+    carregarClientes();
   };
 
   const abrirModalExcluir = (cliente: Cliente) => {
+    setErroExclusao(null);
     setClienteParaExcluir(cliente);
     setModalExcluirAberto(true);
   }
 
   const fecharModalExcluir = () => {
+    setErroExclusao(null);
     setClienteParaExcluir(null);
     setModalExcluirAberto(false);
   }
 
   const handleConfirmarExclusao = async () => {
     if (!clienteParaExcluir) return;
+    setErroExclusao(null);
     try {
       await deletarCliente(clienteParaExcluir.id);
       fecharModalExcluir();
       carregarClientes();
-    } catch (error) {
-      setErro("Falha ao excluir o cliente.");
+    } catch (error: any) {
+      const msg = error.mensagem || error.response?.data?.mensagem || 'Erro desconhecido ao excluir.';
+      setErroExclusao(msg);
     }
   }
 
@@ -136,6 +141,11 @@ function ListagemClientes() {
           <p className="text-sm text-grafite-600">
             Tem certeza que deseja excluir o cliente <strong className="text-grafite-800">{clienteParaExcluir?.nome}</strong>?
           </p>
+          {erroExclusao && (
+            <div className="mt-4 rounded-xl border border-erro/20 bg-erro/10 px-4 py-3 text-sm font-medium text-erro">
+              {erroExclusao}
+            </div>
+          )}
           <div className="mt-6 flex justify-end gap-3 border-t border-grafite-200 pt-4">
             <button
               className="rounded-xl border border-grafite-300 px-5 py-2 text-sm font-medium text-grafite-600 transition-colors hover:bg-grafite-50"
@@ -158,3 +168,4 @@ function ListagemClientes() {
 }
 
 export default ListagemClientes;
+
