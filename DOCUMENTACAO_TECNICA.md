@@ -83,7 +83,7 @@ xsalgados/
         │   ├── Clientes/        ← CRUD completo com modal de formulário
         │   ├── Produtos/        ← CRUD completo com modal de formulário
         │   ├── Usuarios/        ← Listagem somente leitura (sem CRUD no frontend)
-        │   ├── RotasDeEntregas/ ← Agrupamento automático de pedidos em rotas
+        │   ├── RotasDeEntregas/ ← Lote de entrega (capacidade 900–1000 itens)
         │   └── NaoEncontrado/   ← Página 404
         ├── rotas/
         │   ├── index.jsx        ← Definição de rotas com roles permitidas
@@ -270,7 +270,7 @@ idx_usuarios_email         ON usuarios(email)
 
 | Método | Rota | Acesso | Response |
 |---|---|---|---|
-| GET | `/api/entregas/rotas` | Admin, Entregador | `PedidoDto[]` (status Pronto/EmEntrega, data_entrega = hoje) |
+| GET | `/api/entregas/lote` | Admin, Entregador | `LoteEntregaDto { pedidosProntos: PedidoDto[], totalItensAcumulados: number }` |
 
 ### 4.7 Dashboard
 
@@ -381,12 +381,14 @@ Todos os schemas estão em `backend/src/dtos/`. O middleware `validate(schema, s
 | Auto-exclusão bloqueada | Compara id do request com id do JWT. Lança InvalidOperationError |
 | Alteração de senha | Exige `senhaAtual` válida (bcrypt.compare) |
 
-### 6.4 Entregas
+### 6.4 Entregas (Lote)
 
 | Regra | Implementação |
 |---|---|
-| Rotas do dia | Filtra pedidos com status Pronto(3) ou EmEntrega(4), data_entrega dentro de hoje (UTC) |
-| Ordenação | Por data_entrega ascendente |
+| Lote pendente | Filtra pedidos com status Pronto(3), faz JOIN com `itens_pedido` e `clientes` |
+| Total de itens | Soma `quantidade` de todos os `itens_pedido` dos pedidos prontos |
+| Capacidade do lote | Mínimo 900 itens / Máximo 1000 itens para liberar entrega |
+| Liberação | Frontend habilita botão apenas quando `totalItensAcumulados >= 900` |
 
 ### 6.5 Dashboard
 
@@ -428,7 +430,7 @@ errorHandler() → { sucesso: false, mensagem, erros }
 | Produtos (leitura) | ✅ | ✅ | ✅ |
 | Produtos (escrita) | ✅ | ❌ | ❌ |
 | Usuários (CRUD) | ✅ | ❌ | ❌ |
-| Entregas (rotas) | ✅ | ❌ | ✅ |
+| Entregas (lote) | ✅ | ❌ | ✅ |
 
 ### 7.4 Classes de Erro
 
@@ -510,7 +512,7 @@ Funções de mapeamento centralizadas em `utils/mapeamentos.js`:
 | ListagemClientes | CRUD completo, modal form, confirm delete | `buscarClientes()`, `criarCliente()`, `atualizarCliente()`, `deletarCliente()` |
 | ListagemProdutos | CRUD completo, modal form, confirm delete | `buscarProdutos()`, `criarProduto()`, `atualizarProduto()`, `deletarProduto()` |
 | ListagemUsuarios | Somente leitura (sem CRUD) | `buscarUsuarios()` |
-| RotasDeEntregas | Agrupamento automático (max 10 pedidos/rota), iniciar rota, marcar entregue | `buscarRotasDeEntrega()`, `alterarStatusPedido()` |
+| RotasDeEntregas | Lote de entrega com barra de progresso (900–1000 itens), liberar lote, marcar entregue | `buscarLoteEntrega()`, `alterarStatusPedido()` |
 
 ---
 

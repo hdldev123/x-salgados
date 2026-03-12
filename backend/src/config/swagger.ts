@@ -34,25 +34,25 @@ function zodToOpenApi(schema: Parameters<typeof zodToJsonSchema>[0]): OpenAPIV3.
 // ═══════════════════════════════════════════════════════════════════════
 const inputSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   // Auth
-  LoginInput:           zodToOpenApi(LoginSchema),
+  LoginInput: zodToOpenApi(LoginSchema),
 
   // Paginação (query string)
-  PaginacaoInput:       zodToOpenApi(PaginacaoSchema),
+  PaginacaoInput: zodToOpenApi(PaginacaoSchema),
 
   // Clientes
-  CriarClienteInput:    zodToOpenApi(CriarClienteSchema),
+  CriarClienteInput: zodToOpenApi(CriarClienteSchema),
 
   // Produtos
-  CriarProdutoInput:    zodToOpenApi(CriarProdutoSchema),
+  CriarProdutoInput: zodToOpenApi(CriarProdutoSchema),
 
   // Pedidos
-  CriarPedidoInput:     zodToOpenApi(CriarPedidoSchema),
+  CriarPedidoInput: zodToOpenApi(CriarPedidoSchema),
   AtualizarStatusInput: zodToOpenApi(AtualizarStatusSchema),
 
   // Usuários
-  CriarUsuarioInput:    zodToOpenApi(CriarUsuarioSchema),
-  AtualizarUsuarioInput:zodToOpenApi(AtualizarUsuarioSchema),
-  AlterarSenhaInput:    zodToOpenApi(AlterarSenhaSchema),
+  CriarUsuarioInput: zodToOpenApi(CriarUsuarioSchema),
+  AtualizarUsuarioInput: zodToOpenApi(AtualizarUsuarioSchema),
+  AlterarSenhaInput: zodToOpenApi(AlterarSenhaSchema),
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -64,18 +64,18 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   UsuarioLogado: {
     type: 'object',
     properties: {
-      id:     { type: 'integer', example: 1 },
-      nome:   { type: 'string',  example: 'Hugo Garcia' },
-      email:  { type: 'string',  format: 'email', example: 'hugo@xsalgados.com' },
-      perfil: { type: 'string',  enum: ['Administrador', 'Atendente', 'Entregador'] },
+      id: { type: 'integer', example: 1 },
+      nome: { type: 'string', example: 'Hugo Garcia' },
+      email: { type: 'string', format: 'email', example: 'hugo@xsalgados.com' },
+      perfil: { type: 'string', enum: ['Administrador', 'Atendente', 'Entregador'] },
     },
   },
   LoginResponse: {
     type: 'object',
     properties: {
-      token:     { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR...' },
+      token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR...' },
       expiracao: { type: 'string', format: 'date-time' },
-      usuario:   { $ref: '#/components/schemas/UsuarioLogado' },
+      usuario: { $ref: '#/components/schemas/UsuarioLogado' },
     },
   },
 
@@ -83,13 +83,13 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   ResultadoPaginado: {
     type: 'object',
     properties: {
-      dados:        { type: 'array', items: { type: 'object' } },
-      pagina:       { type: 'integer', example: 1 },
-      tamanhoPagina:{ type: 'integer', example: 10 },
-      total:        { type: 'integer', example: 42 },
+      dados: { type: 'array', items: { type: 'object' } },
+      pagina: { type: 'integer', example: 1 },
+      tamanhoPagina: { type: 'integer', example: 10 },
+      total: { type: 'integer', example: 42 },
       totalPaginas: { type: 'integer', example: 5 },
-      temProxima:   { type: 'boolean' },
-      temAnterior:  { type: 'boolean' },
+      temProxima: { type: 'boolean' },
+      temAnterior: { type: 'boolean' },
     },
   },
 
@@ -97,14 +97,14 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   Cliente: {
     type: 'object',
     properties: {
-      id:           { type: 'integer', example: 1 },
-      nome:         { type: 'string',  example: 'Maria Aparecida' },
-      telefone:     { type: 'string',  example: '(11) 99999-9999' },
-      email:        { type: 'string',  nullable: true, example: 'maria@email.com' },
-      endereco:     { type: 'string',  nullable: true, example: 'Rua das Flores, 100' },
-      cidade:       { type: 'string',  nullable: true, example: 'São Paulo' },
-      cep:          { type: 'string',  nullable: true, example: '01310-100' },
-      dataCriacao:  { type: 'string',  format: 'date-time' },
+      id: { type: 'integer', example: 1 },
+      nome: { type: 'string', example: 'Maria Aparecida' },
+      telefone: { type: 'string', example: '(11) 99999-9999' },
+      email: { type: 'string', nullable: true, example: 'maria@email.com' },
+      endereco: { type: 'string', nullable: true, example: 'Rua das Flores, 100' },
+      cidade: { type: 'string', nullable: true, example: 'São Paulo' },
+      cep: { type: 'string', nullable: true, example: '01310-100' },
+      dataCriacao: { type: 'string', format: 'date-time' },
       totalPedidos: { type: 'integer', example: 5 },
     },
   },
@@ -113,13 +113,13 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   Produto: {
     type: 'object',
     properties: {
-      id:          { type: 'integer', example: 1 },
-      nome:        { type: 'string',  example: 'Coxinha Frango' },
-      categoria:   { type: 'string',  example: 'Salgados Fritos' },
-      descricao:   { type: 'string',  nullable: true },
-      preco:       { type: 'number',  format: 'float', example: 4.50 },
-      ativo:       { type: 'boolean', example: true },
-      dataCriacao: { type: 'string',  format: 'date-time' },
+      id: { type: 'integer', example: 1 },
+      nome: { type: 'string', example: 'Coxinha Frango' },
+      categoria: { type: 'string', example: 'Salgados Fritos' },
+      descricao: { type: 'string', nullable: true },
+      preco: { type: 'number', format: 'float', example: 4.50 },
+      ativo: { type: 'boolean', example: true },
+      dataCriacao: { type: 'string', format: 'date-time' },
     },
   },
 
@@ -127,41 +127,41 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   ItemPedidoResponse: {
     type: 'object',
     properties: {
-      id:             { type: 'integer', example: 1 },
-      produtoId:      { type: 'integer', example: 3 },
-      produtoNome:    { type: 'string',  example: 'Coxinha Frango' },
-      quantidade:     { type: 'integer', example: 10 },
-      precoUnitario:  { type: 'number',  format: 'float', example: 4.50 },
-      subtotal:       { type: 'number',  format: 'float', example: 45.00 },
+      id: { type: 'integer', example: 1 },
+      produtoId: { type: 'integer', example: 3 },
+      produtoNome: { type: 'string', example: 'Coxinha Frango' },
+      quantidade: { type: 'integer', example: 10 },
+      precoUnitario: { type: 'number', format: 'float', example: 4.50 },
+      subtotal: { type: 'number', format: 'float', example: 45.00 },
     },
   },
   Pedido: {
     type: 'object',
     properties: {
-      id:               { type: 'integer', example: 1 },
-      clienteId:        { type: 'integer', example: 2 },
-      clienteNome:      { type: 'string',  example: 'Maria Aparecida' },
-      clienteTelefone:  { type: 'string',  nullable: true, example: '(11) 99999-9999' },
-      clienteEndereco:  { type: 'string',  nullable: true },
-      dataCriacao:      { type: 'string',  format: 'date-time' },
-      dataEntrega:      { type: 'string',  format: 'date-time', nullable: true },
-      valorTotal:       { type: 'number',  format: 'float', example: 135.00 },
-      status:           { type: 'string',  example: 'Pendente' },
-      statusEnum:       { type: 'integer', example: 1 },
-      observacoes:      { type: 'string',  nullable: true },
-      itens:            { type: 'array', items: { $ref: '#/components/schemas/ItemPedidoResponse' } },
+      id: { type: 'integer', example: 1 },
+      clienteId: { type: 'integer', example: 2 },
+      clienteNome: { type: 'string', example: 'Maria Aparecida' },
+      clienteTelefone: { type: 'string', nullable: true, example: '(11) 99999-9999' },
+      clienteEndereco: { type: 'string', nullable: true },
+      dataCriacao: { type: 'string', format: 'date-time' },
+      dataEntrega: { type: 'string', format: 'date-time', nullable: true },
+      valorTotal: { type: 'number', format: 'float', example: 135.00 },
+      status: { type: 'string', example: 'Pendente' },
+      statusEnum: { type: 'integer', example: 1 },
+      observacoes: { type: 'string', nullable: true },
+      itens: { type: 'array', items: { $ref: '#/components/schemas/ItemPedidoResponse' } },
     },
   },
   PedidoResumo: {
     type: 'object',
     properties: {
-      id:              { type: 'integer', example: 1 },
-      clienteNome:     { type: 'string',  example: 'Maria Aparecida' },
-      dataCriacao:     { type: 'string',  format: 'date-time' },
-      dataEntrega:     { type: 'string',  format: 'date-time', nullable: true },
-      valorTotal:      { type: 'number',  format: 'float', example: 135.00 },
-      status:          { type: 'string',  example: 'Pendente' },
-      statusEnum:      { type: 'integer', example: 1 },
+      id: { type: 'integer', example: 1 },
+      clienteNome: { type: 'string', example: 'Maria Aparecida' },
+      dataCriacao: { type: 'string', format: 'date-time' },
+      dataEntrega: { type: 'string', format: 'date-time', nullable: true },
+      valorTotal: { type: 'number', format: 'float', example: 135.00 },
+      status: { type: 'string', example: 'Pendente' },
+      statusEnum: { type: 'integer', example: 1 },
       quantidadeItens: { type: 'integer', example: 3 },
     },
   },
@@ -170,12 +170,12 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   Usuario: {
     type: 'object',
     properties: {
-      id:          { type: 'integer', example: 1 },
-      nome:        { type: 'string',  example: 'Hugo Garcia' },
-      email:       { type: 'string',  format: 'email' },
-      perfil:      { type: 'string',  enum: ['Administrador', 'Atendente', 'Entregador'] },
-      dataCriacao: { type: 'string',  format: 'date-time' },
-      ativo:       { type: 'boolean', example: true },
+      id: { type: 'integer', example: 1 },
+      nome: { type: 'string', example: 'Hugo Garcia' },
+      email: { type: 'string', format: 'email' },
+      perfil: { type: 'string', enum: ['Administrador', 'Atendente', 'Entregador'] },
+      dataCriacao: { type: 'string', format: 'date-time' },
+      ativo: { type: 'boolean', example: true },
     },
   },
 
@@ -183,12 +183,12 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   RotaEntrega: {
     type: 'object',
     properties: {
-      pedidoId:       { type: 'integer', example: 5 },
-      clienteNome:    { type: 'string',  example: 'João Silva' },
-      clienteTelefone:{ type: 'string',  example: '(11) 98888-8888' },
-      endereco:       { type: 'string',  example: 'Av. Paulista, 900' },
-      dataEntrega:    { type: 'string',  format: 'date-time' },
-      valorTotal:     { type: 'number',  format: 'float', example: 72.00 },
+      pedidoId: { type: 'integer', example: 5 },
+      clienteNome: { type: 'string', example: 'João Silva' },
+      clienteTelefone: { type: 'string', example: '(11) 98888-8888' },
+      endereco: { type: 'string', example: 'Av. Paulista, 900' },
+      dataEntrega: { type: 'string', format: 'date-time' },
+      valorTotal: { type: 'number', format: 'float', example: 72.00 },
     },
   },
 
@@ -196,14 +196,14 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
   KpisDashboard: {
     type: 'object',
     properties: {
-      pedidosHoje:     { type: 'integer', example: 15 },
-      receitaHoje:     { type: 'number',  example: 675.00 },
-      pedidosMes:      { type: 'integer', example: 320 },
-      receitaMes:      { type: 'number',  example: 14400.00 },
-      clientesAtivos:  { type: 'integer', example: 87 },
-      produtosAtivos:  { type: 'integer', example: 23 },
-      pedidosPendentes:{ type: 'integer', example: 4 },
-      pedidosEmProducao:{ type: 'integer', example: 6 },
+      pedidosHoje: { type: 'integer', example: 15 },
+      receitaHoje: { type: 'number', example: 675.00 },
+      pedidosMes: { type: 'integer', example: 320 },
+      receitaMes: { type: 'number', example: 14400.00 },
+      clientesAtivos: { type: 'integer', example: 87 },
+      produtosAtivos: { type: 'integer', example: 23 },
+      pedidosPendentes: { type: 'integer', example: 4 },
+      pedidosEmProducao: { type: 'integer', example: 6 },
     },
   },
 
@@ -212,15 +212,15 @@ const responseSchemas: Record<string, OpenAPIV3.SchemaObject> = {
     type: 'object',
     properties: {
       sucesso: { type: 'boolean', example: false },
-      mensagem:{ type: 'string',  example: 'Dados inválidos' },
-      erros:   { type: 'array',  items: { type: 'string' }, example: ['Email inválido'] },
+      mensagem: { type: 'string', example: 'Dados inválidos' },
+      erros: { type: 'array', items: { type: 'string' }, example: ['Email inválido'] },
     },
   },
   ErroGenerico: {
     type: 'object',
     properties: {
       sucesso: { type: 'boolean', example: false },
-      mensagem:{ type: 'string',  example: 'Não autorizado' },
+      mensagem: { type: 'string', example: 'Não autorizado' },
     },
   },
 };
@@ -291,18 +291,18 @@ export const swaggerDocument: OpenAPIV3.Document = {
 
   // ── Metadados da API ───────────────────────────────────────────────
   info: {
-    title: 'X Salgados API',
+    title: 'Rangô API',
     version: '1.0.0',
     description: [
-      '## API de Gestão de Pedidos — X Salgados',
+      '## API de Gestão de Pedidos — Rangô',
       '',
-      'Migrada do .NET 8 para Node.js + TypeScript + Express.',
+
       '',
       '### Autenticação',
       'A maioria dos endpoints exige um **Bearer Token JWT**.',
       'Faça login em `POST /api/auth/login` e cole o token no botão **Authorize** acima.',
     ].join('\n'),
-    contact: { name: 'Equipe X Salgados' },
+    contact: { name: 'Equipe Rangô' },
   },
 
   // ── Servidores ──────────────────────────────────────────────────────
@@ -330,12 +330,12 @@ export const swaggerDocument: OpenAPIV3.Document = {
 
   // ── Tags (grupos no Swagger UI) ────────────────────────────────────
   tags: [
-    { name: 'Auth',      description: 'Autenticação — público' },
-    { name: 'Clientes',  description: 'Cadastro de clientes (Admin + Atendente)' },
-    { name: 'Produtos',  description: 'Catálogo de produtos' },
-    { name: 'Pedidos',   description: 'Gestão de pedidos (Admin + Atendente)' },
-    { name: 'Usuários',  description: 'Gestão de usuários do sistema (Admin)' },
-    { name: 'Entregas',  description: 'Rotas de entrega do dia' },
+    { name: 'Auth', description: 'Autenticação — público' },
+    { name: 'Clientes', description: 'Cadastro de clientes (Admin + Atendente)' },
+    { name: 'Produtos', description: 'Catálogo de produtos' },
+    { name: 'Pedidos', description: 'Gestão de pedidos (Admin + Atendente)' },
+    { name: 'Usuários', description: 'Gestão de usuários do sistema (Admin)' },
+    { name: 'Entregas', description: 'Rotas de entrega do dia' },
     { name: 'Dashboard', description: 'KPIs e relatórios gerenciais (Admin)' },
   ],
 
@@ -463,9 +463,9 @@ export const swaggerDocument: OpenAPIV3.Document = {
         parameters: [
           { $ref: '#/components/parameters/queryPagina' },
           { $ref: '#/components/parameters/queryTamanhoPagina' },
-          { name: 'busca',     in: 'query', schema: { type: 'string' }, description: 'Filtro por nome' },
+          { name: 'busca', in: 'query', schema: { type: 'string' }, description: 'Filtro por nome' },
           { name: 'categoria', in: 'query', schema: { type: 'string' }, description: 'Filtro por categoria' },
-          { name: 'ativo',     in: 'query', schema: { type: 'boolean' }, description: 'Filtrar por status ativo/inativo' },
+          { name: 'ativo', in: 'query', schema: { type: 'boolean' }, description: 'Filtrar por status ativo/inativo' },
         ],
         responses: {
           '200': respostaOk({
@@ -776,9 +776,9 @@ export const swaggerDocument: OpenAPIV3.Document = {
             items: {
               type: 'object',
               properties: {
-                mes:         { type: 'string', example: '2026-01' },
-                quantidade:  { type: 'integer', example: 87 },
-                receita:     { type: 'number',  example: 3915.00 },
+                mes: { type: 'string', example: '2026-01' },
+                quantidade: { type: 'integer', example: 87 },
+                receita: { type: 'number', example: 3915.00 },
               },
             },
           }),
@@ -798,7 +798,7 @@ export const swaggerDocument: OpenAPIV3.Document = {
             items: {
               type: 'object',
               properties: {
-                status:     { type: 'string',  example: 'Pendente' },
+                status: { type: 'string', example: 'Pendente' },
                 quantidade: { type: 'integer', example: 12 },
               },
             },
@@ -817,8 +817,8 @@ export const swaggerDocument: OpenAPIV3.Document = {
           '200': respostaOk({
             type: 'object',
             properties: {
-              kpis:               { $ref: '#/components/schemas/KpisDashboard' },
-              pedidosPorMes:      { type: 'array', items: { type: 'object' } },
+              kpis: { $ref: '#/components/schemas/KpisDashboard' },
+              pedidosPorMes: { type: 'array', items: { type: 'object' } },
               distribuicaoStatus: { type: 'array', items: { type: 'object' } },
             },
           }),

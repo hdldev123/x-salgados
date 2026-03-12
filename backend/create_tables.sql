@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS clientes (
     endereco VARCHAR(255),
     cidade VARCHAR(100),
     cep VARCHAR(10),
+    whatsapp_jid VARCHAR(100),   -- JID @s.whatsapp.net para envio direto
+    whatsapp_lid VARCHAR(100),   -- JID @lid (Linked Identity) recebido do WhatsApp
     data_criacao TIMESTAMP DEFAULT NOW()
 );
 
@@ -64,6 +66,28 @@ CREATE INDEX IF NOT EXISTS idx_itens_pedido_pedido_id ON itens_pedido(pedido_id)
 CREATE INDEX IF NOT EXISTS idx_itens_pedido_produto_id ON itens_pedido(produto_id);
 CREATE INDEX IF NOT EXISTS idx_produtos_categoria ON produtos(categoria);
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+CREATE INDEX IF NOT EXISTS idx_clientes_whatsapp_jid ON clientes(whatsapp_jid);
+
+-- Tabela de Estado do Bot WhatsApp (sessões de onboarding)
+CREATE TABLE IF NOT EXISTS sessoes_whatsapp (
+    telefone VARCHAR(20) PRIMARY KEY,
+    etapa VARCHAR(50) NOT NULL,
+    dados JSONB DEFAULT '{}'::jsonb,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de Auditoria de Mensagens WhatsApp
+CREATE TABLE IF NOT EXISTS whatsapp_mensagens (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    cliente_id INT REFERENCES clientes(id) ON DELETE SET NULL,
+    remote_jid VARCHAR(100) NOT NULL,
+    texto TEXT NOT NULL,
+    direcao VARCHAR(10) CHECK (direcao IN ('INBOUND', 'OUTBOUND')),
+    data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_whatsapp_mensagens_cliente ON whatsapp_mensagens(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_mensagens_data ON whatsapp_mensagens(data_registro);
 
 -- ATENÇÃO: O backend agora usa bcrypt para senhas (não mais SHA256).
 -- NÃO use o INSERT abaixo diretamente. Em vez disso, após criar as tabelas,

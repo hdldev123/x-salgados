@@ -17,3 +17,8 @@ yarn-error.log*
 # Sistema operacional
 .DS_Store
 Thumbs.db
+
+# ─── WhatsApp (sessão Baileys) ────────────────────────────────────────────────
+# Contém chaves Signal Protocol (criptografia E2E) — NUNCA commitar.
+# Comprometido = sequestro da sessão WhatsApp da empresa.
+auth_whatsapp/

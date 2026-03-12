@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import rateLimit from 'express-rate-limit';
+import { authenticate, authorize, authenticateWebhook } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 
 // Schemas Zod
@@ -18,13 +19,30 @@ import * as pedidosController from '../controllers/pedidos.controller';
 import * as usuariosController from '../controllers/usuarios.controller';
 import * as entregasController from '../controllers/entregas.controller';
 import * as dashboardController from '../controllers/dashboard.controller';
+import * as whatsappController from '../controllers/whatsapp.controller';
 
 const router = Router();
+
+// ─── Rate Limiter — Login ────────────────────────────────────────────
+// Máximo de 10 tentativas por IP a cada 15 minutos.
+// Protege contra brute-force e credential stuffing.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // janela de 15 minutos
+  max: 10,                   // máximo de 10 requisições por IP dentro da janela
+  standardHeaders: 'draft-7', // envia os headers RateLimit-* (RFC 6585)
+  legacyHeaders: false,       // desativa os headers X-RateLimit-* antigos
+  skipSuccessfulRequests: false, // conta também as tentativas bem-sucedidas
+  message: {
+    sucesso: false,
+    mensagem: 'Muitas tentativas de login. Aguarde 15 minutos e tente novamente.',
+    erros: ['Limite de tentativas de login excedido.'],
+  },
+});
 
 // ═══════════════════════════════════════════════════════════════════════
 // AUTH — Público
 // ═══════════════════════════════════════════════════════════════════════
-router.post('/api/auth/login', validate(LoginSchema), authController.login);
+router.post('/api/auth/login', loginLimiter, validate(LoginSchema), authController.login);
 
 // ═══════════════════════════════════════════════════════════════════════
 // CLIENTES — Admin + Atendente
@@ -141,7 +159,7 @@ router.post(
 router.patch(
   '/api/pedidos/:id/status',
   authenticate,
-  authorize('Administrador', 'Atendente'),
+  authorize('Administrador', 'Atendente', 'Entregador'),
   validate(AtualizarStatusSchema),
   pedidosController.atualizarStatus,
 );
@@ -199,10 +217,24 @@ router.patch(
 // ENTREGAS — Admin + Entregador
 // ═══════════════════════════════════════════════════════════════════════
 router.get(
-  '/api/entregas/rotas',
+  '/api/entregas/lote',
   authenticate,
   authorize('Administrador', 'Entregador'),
-  entregasController.obterRotasHoje,
+  entregasController.obterLoteEntrega,
+);
+
+router.post(
+  '/api/entregas/liberar-lote',
+  authenticate,
+  authorize('Administrador', 'Entregador'),
+  entregasController.liberarLote,
+);
+
+router.get(
+  '/api/entregas/em-transito',
+  authenticate,
+  authorize('Administrador', 'Entregador'),
+  entregasController.obterPedidosEmTransito,
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -235,5 +267,10 @@ router.get(
   authorize('Administrador'),
   dashboardController.obterDashboardCompleto,
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+// WHATSAPP WEBHOOK — Validado por token (WHATSAPP_WEBHOOK_TOKEN no .env)
+// ═══════════════════════════════════════════════════════════════════════
+router.post('/api/whatsapp/webhook', authenticateWebhook, whatsappController.receberWebhook);
 
 export default router;

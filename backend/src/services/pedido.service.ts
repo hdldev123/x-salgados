@@ -6,25 +6,65 @@ import {
   PedidoDto,
   PedidoResumoDto,
   ItemPedidoResponseDto,
+  LoteEntregaDto,
+  LoteEmAndamentoDto,
 } from '../dtos/pedido.dto';
 import { PaginacaoDto, ResultadoPaginadoDto, criarResultadoPaginado } from '../dtos/common.dto';
 
+interface ItemPedidoBanco {
+  id: number;
+  produto_id: number;
+  quantidade: number;
+  preco_unitario_snapshot: string | number;
+  produtos?: { nome: string };
+}
+
+interface PedidoBanco {
+  id: number;
+  cliente_id: number;
+  data_criacao: string;
+  data_entrega: string | null;
+  valor_total: string | number;
+  status: number;
+  observacoes: string | null;
+  clientes?: { nome: string; telefone: string | null; endereco: string | null };
+  itens_pedido?: ItemPedidoBanco[];
+}
+
+interface PedidoResumoBanco {
+  id: number;
+  cliente_id: number;
+  data_criacao: string;
+  data_entrega: string | null;
+  valor_total: string | number;
+  status: number;
+  clientes?: { nome: string };
+  itens_pedido?: { quantidade: number }[];
+}
+
+interface ProdutoBanco {
+  id: number;
+  nome: string;
+  preco: string | number;
+  ativo: boolean;
+}
+
 // ─── Mapper ──────────────────────────────────────────────────────────
-function mapToDto(pedido: any): PedidoDto {
+function mapToDto(pedido: PedidoBanco): PedidoDto {
   return {
     id: pedido.id,
     clienteId: pedido.cliente_id,
     clienteNome: pedido.clientes?.nome ?? '',
     clienteTelefone: pedido.clientes?.telefone ?? null,
     clienteEndereco: pedido.clientes?.endereco ?? null,
-    dataCriacao: pedido.data_criacao,
-    dataEntrega: pedido.data_entrega,
+    dataCriacao: new Date(pedido.data_criacao),
+    dataEntrega: pedido.data_entrega ? new Date(pedido.data_entrega) : null,
     valorTotal: Number(pedido.valor_total),
     status: StatusPedidoLabel[pedido.status as StatusPedido] || pedido.status.toString(),
     statusEnum: pedido.status,
     observacoes: pedido.observacoes,
     itens: (pedido.itens_pedido || []).map(
-      (i: any): ItemPedidoResponseDto => ({
+      (i: ItemPedidoBanco): ItemPedidoResponseDto => ({
         id: i.id,
         produtoId: i.produto_id,
         produtoNome: i.produtos?.nome ?? '',
@@ -69,16 +109,17 @@ export async function obterTodosAsync(
   const { data, count, error } = await query;
   if (error) throw new Error(error.message);
 
-  const dados: PedidoResumoDto[] = (data || []).map((pedido: any) => ({
+  const dados: PedidoResumoDto[] = (data || []).map((pedido: PedidoResumoBanco) => ({
     id: pedido.id,
+    clienteId: pedido.cliente_id,
     clienteNome: pedido.clientes?.nome ?? '',
-    dataCriacao: pedido.data_criacao,
-    dataEntrega: pedido.data_entrega,
+    dataCriacao: new Date(pedido.data_criacao),
+    dataEntrega: pedido.data_entrega ? new Date(pedido.data_entrega) : null,
     valorTotal: Number(pedido.valor_total),
     status: StatusPedidoLabel[pedido.status as StatusPedido] || pedido.status.toString(),
     statusEnum: pedido.status,
     quantidadeItens: (pedido.itens_pedido || []).reduce(
-      (sum: number, i: any) => sum + i.quantidade, 0,
+      (sum: number, i: { quantidade: number }) => sum + i.quantidade, 0,
     ),
   }));
 
@@ -93,7 +134,11 @@ export async function obterPorIdAsync(id: number): Promise<PedidoDto | null> {
     .eq('id', id)
     .single();
 
-  if (error || !pedido) return null;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw new Error(`Erro ao buscar pedido: ${error.message}`);
+  }
+  if (!pedido) return null;
   return mapToDto(pedido);
 }
 
@@ -119,20 +164,20 @@ export async function criarAsync(
   const produtoIds = dto.itens.map((i) => i.produtoId);
   const { data: produtos, error: produtoError } = await supabase
     .from('produtos')
-    .select('*')
+    .select('id, nome, preco, ativo')
     .in('id', produtoIds);
 
   if (produtoError) throw new Error(produtoError.message);
 
   // Verificar produtos inexistentes
-  const idsEncontrados = new Set((produtos || []).map((p: any) => p.id));
+  const idsEncontrados = new Set((produtos || []).map((p: ProdutoBanco) => p.id));
   const naoEncontrados = produtoIds.filter((pid) => !idsEncontrados.has(pid));
   if (naoEncontrados.length > 0) {
     erros.push(`Produtos não encontrados: ${naoEncontrados.join(', ')}`);
   }
 
   // Verificar produtos inativos
-  const inativos = (produtos || []).filter((p: any) => !p.ativo).map((p: any) => p.nome);
+  const inativos = (produtos || []).filter((p: ProdutoBanco) => !p.ativo).map((p: ProdutoBanco) => p.nome);
   if (inativos.length > 0) {
     erros.push(`Produtos inativos não podem ser adicionados: ${inativos.join(', ')}`);
   }
@@ -142,11 +187,11 @@ export async function criarAsync(
   }
 
   // REGRA CRÍTICA: Calcular valor total usando preços do banco
-  const itensParaInserir: any[] = [];
+  const itensParaInserir: { produto_id: number; quantidade: number; preco_unitario_snapshot: number }[] = [];
   let valorTotal = 0;
 
   for (const itemDto of dto.itens) {
-    const produto = (produtos || []).find((p: any) => p.id === itemDto.produtoId)!;
+    const produto = (produtos || []).find((p: ProdutoBanco) => p.id === itemDto.produtoId)!;
     const preco = Number(produto.preco);
     const subtotal = preco * itemDto.quantidade;
     valorTotal += subtotal;
@@ -158,39 +203,26 @@ export async function criarAsync(
     });
   }
 
-  // Inserir pedido
-  const { data: pedidoCriado, error: pedidoError } = await supabase
-    .from('pedidos')
-    .insert({
-      cliente_id: dto.clienteId,
-      data_entrega: dto.dataEntrega ?? null,
-      valor_total: valorTotal,
-      status: StatusPedido.Pendente,
-      observacoes: dto.observacoes ?? null,
-    })
-    .select()
-    .single();
+  // Criar pedido + itens em uma única transação atômica via RPC.
+  // Se qualquer INSERT falhar, o Postgres desfaz TUDO automaticamente —
+  // sem risco de "pedidos fantasma" deixados para trás.
+  const { data: pedidoId, error: rpcError } = await supabase.rpc('criar_pedido_atomico', {
+    p_cliente_id: dto.clienteId,
+    p_data_entrega: dto.dataEntrega ?? null,
+    p_valor_total: valorTotal,
+    p_status: StatusPedido.Pendente,
+    p_observacoes: dto.observacoes ?? null,
+    p_itens: itensParaInserir.map((item) => ({
+      produto_id: item.produto_id,
+      quantidade: item.quantidade,
+      preco_unitario_snapshot: item.preco_unitario_snapshot,
+    })),
+  });
 
-  if (pedidoError) throw new Error(pedidoError.message);
-
-  // Inserir itens vinculados ao pedido
-  const itensComPedidoId = itensParaInserir.map((item) => ({
-    ...item,
-    pedido_id: pedidoCriado.id,
-  }));
-
-  const { error: itensError } = await supabase
-    .from('itens_pedido')
-    .insert(itensComPedidoId);
-
-  if (itensError) {
-    // Rollback: remove o pedido se os itens falharem
-    await supabase.from('pedidos').delete().eq('id', pedidoCriado.id);
-    throw new Error(itensError.message);
-  }
+  if (rpcError) throw new Error(rpcError.message);
 
   // Recarregar com relações
-  const pedido = await obterPorIdAsync(pedidoCriado.id);
+  const pedido = await obterPorIdAsync(pedidoId as number);
   return { pedido, erros: null };
 }
 
@@ -205,9 +237,13 @@ export async function atualizarStatusAsync(
     .eq('id', id)
     .single();
 
-  if (findError || !pedido) return null;
+  if (findError) {
+    if (findError.code === 'PGRST116') return null;
+    throw new Error(`Erro ao buscar pedido para atualização: ${findError.message}`);
+  }
+  if (!pedido) return null;
 
-  const updateData: any = { status: dto.status };
+  const updateData: Partial<PedidoBanco> = { status: dto.status };
 
   // Se status for Entregue, registrar data de entrega automaticamente
   if (dto.status === StatusPedido.Entregue && !pedido.data_entrega) {
@@ -224,23 +260,90 @@ export async function atualizarStatusAsync(
   return obterPorIdAsync(id);
 }
 
-// ─── Rotas de Entrega (hoje) ─────────────────────────────────────────
-export async function obterRotasHojeAsync(): Promise<PedidoDto[]> {
-  const hoje = new Date();
-  hoje.setUTCHours(0, 0, 0, 0);
-
-  const amanha = new Date(hoje);
-  amanha.setUTCDate(amanha.getUTCDate() + 1);
-
+// ─── Lote de Entrega (pedidos prontos acumulados) ────────────────────
+/**
+ * Busca todos os pedidos com status PRONTO (3), incluindo seus itens,
+ * e calcula o total acumulado de unidades (soma de quantidade em itens_pedido).
+ * A lógica de "lote" define que o motoboy só pode sair quando >= 900 itens.
+ */
+export async function obterLoteEntregaAsync(): Promise<LoteEntregaDto> {
   const { data: pedidos, error } = await supabase
     .from('pedidos')
     .select('*, clientes(*), itens_pedido(*, produtos(*))')
-    .in('status', [StatusPedido.Pronto, StatusPedido.EmEntrega])
-    .not('data_entrega', 'is', null)
-    .gte('data_entrega', hoje.toISOString())
-    .lt('data_entrega', amanha.toISOString())
-    .order('data_entrega', { ascending: true });
+    .eq('status', StatusPedido.Pronto)
+    .order('data_criacao', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (pedidos || []).map(mapToDto);
+
+  // Mapear para DTO e injetar totalItens por pedido (Null Safety via ?.)
+  const pedidosProntos = (pedidos || []).map((pedidoRaw: any) => {
+    const dto = mapToDto(pedidoRaw);
+    dto.totalItens = (pedidoRaw.itens_pedido || []).reduce(
+      (sum: number, item: ItemPedidoBanco) => sum + item.quantidade, 0
+    );
+    return dto;
+  });
+
+  // Somar TODAS as quantidades de itens de todos os pedidos prontos
+  const totalLote = (pedidos || []).reduce((acc, pedido) => {
+    const itensPedido = pedido.itens_pedido || [];
+    return acc + itensPedido.reduce((sum: number, item: ItemPedidoBanco) => sum + item.quantidade, 0);
+  }, 0);
+
+  return {
+    pedidosProntos,
+    totalLote,
+  };
+}
+
+// ─── Liberar Lote (Pronto → Em Entrega em massa) ─────────────────────
+/**
+ * Move TODOS os pedidos com status Pronto(3) para Em Entrega(4) de uma vez.
+ * Retorna a quantidade de pedidos afetados.
+ */
+export async function liberarLoteAsync(): Promise<{ pedidosAfetados: number }> {
+  // Buscar IDs dos pedidos prontos
+  const { data: pedidosProntos, error: findError } = await supabase
+    .from('pedidos')
+    .select('id')
+    .eq('status', StatusPedido.Pronto);
+
+  if (findError) throw new Error(findError.message);
+  if (!pedidosProntos || pedidosProntos.length === 0) {
+    return { pedidosAfetados: 0 };
+  }
+
+  const ids = pedidosProntos.map((p: { id: number }) => p.id);
+
+  const { error: updateError } = await supabase
+    .from('pedidos')
+    .update({ status: StatusPedido.EmEntrega })
+    .in('id', ids);
+
+  if (updateError) throw new Error(updateError.message);
+
+  return { pedidosAfetados: ids.length };
+}
+
+// ─── Pedidos Em Trânsito ─────────────────────────────────────────────
+/**
+ * Busca todos os pedidos com status Em Entrega(4), incluindo itens e clientes.
+ */
+export async function obterPedidosEmTransitoAsync(): Promise<LoteEmAndamentoDto> {
+  const { data: pedidos, error } = await supabase
+    .from('pedidos')
+    .select('*, clientes(*), itens_pedido(*, produtos(*))')
+    .eq('status', StatusPedido.EmEntrega)
+    .order('data_criacao', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const pedidosMapeados = (pedidos || []).map(mapToDto);
+  const valorTotal = pedidosMapeados.reduce((acc, p) => acc + p.valorTotal, 0);
+
+  return {
+    pedidosEmTransito: pedidosMapeados,
+    totalPedidos: pedidosMapeados.length,
+    valorTotal,
+  };
 }

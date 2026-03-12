@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 /**
  * Middleware global de tratamento de exceções.
  * Converte todas as exceções em respostas JSON padronizadas (ApiResponse).
- * Equivale ao ExceptionHandlingMiddleware.cs do .NET.
+
  */
 export function errorHandler(
   err: Error,
@@ -27,10 +27,8 @@ export function errorHandler(
   } else if (err.name === 'ConflictError') {
     statusCode = 409;
   } else if (statusCode === 500) {
-    // Em produção, não expor detalhes internos
-    if (process.env.NODE_ENV === 'production') {
-      mensagem = 'Ocorreu um erro interno. Tente novamente mais tarde.';
-    }
+    // Nunca expor detalhes internos de banco/infraestrutura para o cliente
+    mensagem = 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.';
   }
 
   res.status(statusCode).json({

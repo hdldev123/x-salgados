@@ -74,8 +74,8 @@ export async function excluir(req: Request, res: Response, next: NextFunction): 
     const { sucesso, mensagemErro } = await clienteService.excluirAsync(id);
 
     if (!sucesso) {
-      if (mensagemErro?.includes('pedidos vinculados')) {
-        res.status(409).json({ sucesso: false, mensagem: mensagemErro });
+      if (mensagemErro?.includes('pedidos')) {
+        res.status(400).json({ sucesso: false, mensagem: mensagemErro });
         return;
       }
       res.status(404).json({ sucesso: false, mensagem: mensagemErro });

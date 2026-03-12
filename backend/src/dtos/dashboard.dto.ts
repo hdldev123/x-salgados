@@ -1,5 +1,3 @@
-import { StatusPedido } from '../models/enums';
-
 // ─── KPIs ────────────────────────────────────────────────────────────
 export interface DashboardKpisDto {
   receitaTotal: number;
@@ -8,6 +6,9 @@ export interface DashboardKpisDto {
   pedidosPendentes: number;
   pedidosHoje: number;
   receitaHoje: number;
+  totalPedidosConcluidos: number;
+  totalPedidosCancelados: number;
+  receitaCancelada: number;
 }
 
 // ─── Pedidos por Mês ─────────────────────────────────────────────────
@@ -26,9 +27,16 @@ export interface DistribuicaoStatusDto {
   percentual: number;
 }
 
+// ─── Produto Mais Vendido ────────────────────────────────────────────
+export interface ProdutoMaisVendidoDto {
+  nome: string;
+  quantidadeVendida: number;
+}
+
 // ─── Dashboard Completo ──────────────────────────────────────────────
 export interface DashboardCompletoDto {
   kpis: DashboardKpisDto;
   pedidosPorMes: PedidosPorMesDto[];
   distribuicaoStatus: DistribuicaoStatusDto[];
+  produtosMaisVendidos: ProdutoMaisVendidoDto[];
 }

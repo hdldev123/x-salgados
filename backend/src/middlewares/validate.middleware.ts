@@ -3,7 +3,7 @@ import { ZodSchema, ZodError } from 'zod';
 
 /**
  * Middleware de validação usando Zod.
- * Substitui o Data Annotations / Model Binding do ASP.NET Core.
+
  *
  * Uso: `validate(CriarPedidoSchema)` → valida req.body
  * Uso: `validate(PaginacaoSchema, 'query')` → valida req.query
@@ -13,7 +13,7 @@ export function validate(schema: ZodSchema, source: 'body' | 'query' | 'params' 
     try {
       const parsed = schema.parse(req[source]);
       // Sobrescreve com os dados validados e transformados (coerções, defaults)
-      (req as any)[source] = parsed;
+      Object.assign(req, { [source]: parsed });
       next();
     } catch (error) {
       if (error instanceof ZodError) {

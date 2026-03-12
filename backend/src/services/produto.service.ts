@@ -56,7 +56,11 @@ export async function obterPorIdAsync(id: number): Promise<ProdutoDto | null> {
     .eq('id', id)
     .single();
 
-  if (error || !data) return null;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw new Error(`Erro ao obter produto: ${error.message}`);
+  }
+  if (!data) return null;
   return mapToDto(data);
 }
 
@@ -108,7 +112,11 @@ export async function atualizarAsync(
     .select()
     .single();
 
-  if (error) return null;
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw new Error(`Erro ao atualizar produto: ${error.message}`);
+  }
+  if (!data) return null;
   return mapToDto(data);
 }
 
@@ -121,6 +129,10 @@ export async function excluirAsync(id: number): Promise<boolean> {
     .select('id')
     .single();
 
-  if (error || !data) return false;
+  if (error) {
+    if (error.code === 'PGRST116') return false;
+    throw new Error(`Erro ao excluir produto: ${error.message}`);
+  }
+  if (!data) return false;
   return true;
 }

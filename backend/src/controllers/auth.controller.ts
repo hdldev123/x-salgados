@@ -3,7 +3,7 @@ import * as authService from '../services/auth.service';
 
 /**
  * POST /api/auth/login
- * Equivale a AuthController.Login() do C#.
+
  */
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {

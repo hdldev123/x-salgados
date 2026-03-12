@@ -60,10 +60,13 @@ export interface PedidoDto {
   statusEnum: StatusPedido;
   observacoes: string | null;
   itens: ItemPedidoResponseDto[];
+  /** Soma de quantidade de todos os itens deste pedido (injetado apenas no endpoint de lote) */
+  totalItens?: number;
 }
 
 export interface PedidoResumoDto {
   id: number;
+  clienteId: number;
   clienteNome: string;
   dataCriacao: Date;
   dataEntrega: Date | null;
@@ -71,4 +74,19 @@ export interface PedidoResumoDto {
   status: string;
   statusEnum: StatusPedido;
   quantidadeItens: number;
+}
+
+// ─── Lote de Entrega ─────────────────────────────────────────────────
+/** Estrutura retornada pelo endpoint GET /api/entregas/lote */
+export interface LoteEntregaDto {
+  pedidosProntos: PedidoDto[];
+  /** Soma global de itens de todos os pedidos prontos (totalLote = Σ totalItens) */
+  totalLote: number;
+}
+
+/** Estrutura retornada pelo endpoint GET /api/entregas/em-transito */
+export interface LoteEmAndamentoDto {
+  pedidosEmTransito: PedidoDto[];
+  totalPedidos: number;
+  valorTotal: number;
 }

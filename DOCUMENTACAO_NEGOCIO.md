@@ -10,7 +10,7 @@
 
 O **X Salgados** é um sistema web completo para gestão operacional de uma lanchonete, desenvolvido para substituir processos manuais (cadernos, planilhas, WhatsApp) por um fluxo digital centralizado, seguro e acessível de qualquer dispositivo com navegador.
 
-O sistema cobre o **ciclo operacional completo**: cadastro de clientes e produtos, criação e acompanhamento de pedidos, organização de rotas de entrega e painel gerencial com indicadores de desempenho (KPIs).
+O sistema cobre o **ciclo operacional completo**: cadastro de clientes e produtos, criação e acompanhamento de pedidos, organização de lotes de entrega e painel gerencial com indicadores de desempenho (KPIs).
 
 ---
 
@@ -55,7 +55,7 @@ O sistema implementa **controle de acesso baseado em papéis (RBAC)** com três 
   - Gerencia clientes (cadastro completo)
   - Cria e acompanha pedidos
   - Gerencia usuários do sistema (criar contas, definir perfis, alterar senhas)
-  - Acessa rotas de entrega
+  - Acessa lote de entrega
 
 ### Atendente
 - **Quem usa:** Funcionário(a) que recebe pedidos (balcão, telefone)
@@ -68,8 +68,8 @@ O sistema implementa **controle de acesso baseado em papéis (RBAC)** com três 
 ### Entregador
 - **Quem usa:** Funcionário(a) responsável pelas entregas
 - **O que faz:**
-  - Visualiza as rotas de entrega do dia
-  - Marca pedidos como "A caminho" ao iniciar a rota
+  - Visualiza o lote pendente de entrega com barra de progresso
+  - Libera o lote quando a capacidade mínima (900 itens) é atingida
   - Confirma a entrega ao finalizar cada pedido
 
 ---
@@ -157,15 +157,16 @@ Tela exclusiva do Administrador com visão consolidada do negócio:
 - **Tabela:** Lista tradicional com todos os pedidos, filtros por status e período
 - **Kanban:** Quadro visual com 3 colunas (Pendente, Em Produção, Pronto). Permite alterar status arrastando ou via dropdown
 
-### 5.6 Rotas de Entrega
+### 5.6 Lote de Entrega
 
-Tela dedicada ao perfil **Entregador** para organizar as entregas do dia:
+Tela dedicada ao perfil **Entregador** para organizar as entregas por lote de produção:
 
 | Funcionalidade | Descrição |
 |---|---|
-| Agrupamento automático | Pedidos prontos são organizados em rotas de até 10 pedidos |
-| Informações da rota | CEPs, quantidade de pedidos, valor total |
-| Iniciar rota | Marca todos os pedidos como "Em Entrega" com um clique |
+| Lote pendente | Pedidos prontos acumulam em um lote com capacidade de 900–1000 itens |
+| Barra de progresso | Exibe visualmente a quantidade acumulada vs. capacidade máxima (1000) |
+| Estatísticas | Itens acumulados, volume mínimo, nº de pedidos e valor total |
+| Liberar lote | Botão habilitado apenas quando total de itens ≥ 900, marca todos como "Em Entrega" |
 | Confirmar entrega | Marca cada pedido individualmente como "Entregue" |
 | Recarregamento automático | A tela atualiza após cada ação |
 
@@ -315,11 +316,11 @@ DURANTE O DIA — Atendente recebe pedidos
   ├── Cozinha inicia → Atendente muda para "Em Produção"
   └── Cozinha finaliza → Atendente muda para "Pronto"
 
-ENTREGAS — Entregador organiza a rota
+ENTREGAS — Entregador organiza o lote
   │
-  ├── Acessa tela de Rotas de Entrega
-  ├── Vê pedidos prontos agrupados automaticamente
-  ├── Clica "Iniciar Rota" → todos ficam "Em Entrega"
+  ├── Acessa tela de Lote de Entrega
+  ├── Vê pedidos prontos acumulados com barra de progresso
+  ├── Quando total de itens ≥ 900 → Clica "Liberar Lote" → todos ficam "Em Entrega"
   ├── Chega em cada cliente → marca "Entregue" individualmente
   └── Data/hora da entrega é registrada automaticamente
 
@@ -457,11 +458,12 @@ FIM DO DIA — Administrador consulta resultados
 - Lista de todos os funcionários cadastrados (nome, email, função)
 - Tela somente leitura na interface atual
 
-### 11.7 Rotas de Entrega (Entregador)
-- Barra de estatísticas (total de rotas, total de pedidos, valor total)
-- Cards de rota com: número, CEPs, lista de pedidos, valor
-- Botões: "Iniciar Rota" e "Marcar Entregue"
-- Status visual: Aguardando → Em Entrega → Concluída
+### 11.7 Lote de Entrega (Entregador)
+- Hero card com barra de progresso (0–1000 itens acumulados)
+- Grade de estatísticas: itens acumulados, volume mínimo (900), total de pedidos, valor total
+- Botão "Liberar Lote para Entrega" (habilitado quando ≥ 900 itens, com animação pulse)
+- Lista de pedidos prontos com badge de quantidade de itens
+- Botão "Marcar Entregue" por pedido individual
 
 ---
 
@@ -472,7 +474,7 @@ FIM DO DIA — Administrador consulta resultados
 | **Controle de acesso real (RBAC)** | Não é apenas cosmético — o backend valida permissões em cada requisição |
 | **Preço snapshot** | Solução profissional usada em e-commerces reais para integridade financeira |
 | **Kanban operacional** | Visualização moderna do fluxo de pedidos usada em empresas como iFood/Rappi |
-| **Rotas de entrega inteligentes** | Agrupamento automático de pedidos por rota com controle de status |
+| **Lote de entrega inteligente** | Acumulação de pedidos prontos com controle de capacidade (900–1000 itens) e barra de progresso visual |
 | **API documentada automaticamente** | Swagger gerado a partir dos schemas de validação (single source of truth) |
 | **Validação robusta** | Zod valida tipo, formato, tamanho e obrigatoriedade de cada campo |
 | **Segurança por design** | bcrypt, JWT, CORS, proteção referencial, ocultação de erros internos |
