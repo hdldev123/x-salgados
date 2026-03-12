@@ -105,27 +105,34 @@ export interface ResultadoPaginado<T> {
 }
 
 export interface DashboardKPIs {
-  pedidosHoje: number;
-  pedidosSemana: number;
-  pedidosMes: number;
-  receitaHoje: number;
-  receitaSemana: number;
-  receitaMes: number;
+  receitaTotal: number;
+  totalPedidos: number;
   totalClientes: number;
-  totalProdutosAtivos: number;
+  pedidosPendentes: number;
+  pedidosHoje: number;
+  receitaHoje: number;
+  totalPedidosConcluidos: number;
+  totalPedidosCancelados: number;
+  receitaCancelada: number;
 }
 
 export interface PedidosPorMes {
   ano: number;
   mes: number;
-  quantidade: number;
-  receita: number;
+  mesNome: string;
+  totalPedidos: number;
+  receitaTotal: number;
 }
 
 export interface DistribuicaoStatus {
   status: string;
   quantidade: number;
   percentual: number;
+}
+
+export interface ProdutoMaisVendido {
+  nome: string;
+  quantidadeVendida: number;
 }
 
 export interface ApiError {

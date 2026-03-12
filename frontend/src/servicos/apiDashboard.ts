@@ -1,5 +1,5 @@
 import api from './api';
-import { DashboardKPIs, PedidosPorMes, DistribuicaoStatus } from '../types';
+import { DashboardKPIs, PedidosPorMes, DistribuicaoStatus, ProdutoMaisVendido } from '../types';
 
 export const buscarKpis = async (): Promise<DashboardKPIs> => {
   const response = await api.get('/api/dashboard/kpis');
@@ -22,6 +22,7 @@ export interface DashboardCompletoResponse {
   kpis: DashboardKPIs;
   pedidosPorMes: PedidosPorMes[];
   distribuicaoStatus: DistribuicaoStatus[];
+  produtosMaisVendidos: ProdutoMaisVendido[];
 }
 
 export const buscarDashboardCompleto = async (): Promise<DashboardCompletoResponse> => {

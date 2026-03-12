@@ -4,18 +4,17 @@ import {
   DashboardKpisDto,
   PedidosPorMesDto,
   DistribuicaoStatusDto,
+  ProdutoMaisVendidoDto,
   DashboardCompletoDto,
 } from '../dtos/dashboard.dto';
 
 // Nomes dos meses em pt-BR para formatação do gráfico
 const NOMES_MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-// ─── KPIs ────────────────────────────────────────────────────────────
-// DBA-003: antes buscava TODOS os pedidos + clientes em memória e calculava em JS.
-// Agora usa a RPC `get_dashboard_kpis` que faz COUNT/SUM diretamente no Postgres.
+// ─── KPIs (v2 — inclui cancelados e concluídos) ─────────────────────
 export async function obterKpisAsync(): Promise<DashboardKpisDto> {
   const [kpisResult, clientesResult] = await Promise.all([
-    supabase.rpc('get_dashboard_kpis').single(),
+    supabase.rpc('get_dashboard_kpis_v2').single(),
     supabase.from('clientes').select('id', { count: 'exact', head: true }),
   ]);
 
@@ -27,6 +26,9 @@ export async function obterKpisAsync(): Promise<DashboardKpisDto> {
     pedidos_pendentes: string;
     pedidos_hoje: string;
     receita_hoje: string;
+    total_concluidos: string;
+    total_cancelados: string;
+    receita_cancelada: string;
   };
 
   return {
@@ -36,12 +38,13 @@ export async function obterKpisAsync(): Promise<DashboardKpisDto> {
     pedidosPendentes: Number(k.pedidos_pendentes),
     pedidosHoje: Number(k.pedidos_hoje),
     receitaHoje: Number(k.receita_hoje),
+    totalPedidosConcluidos: Number(k.total_concluidos),
+    totalPedidosCancelados: Number(k.total_cancelados),
+    receitaCancelada: Number(k.receita_cancelada),
   };
 }
 
 // ─── Pedidos por Mês ─────────────────────────────────────────────────
-// DBA-003: antes trazia todos os pedidos do período e agrupava em JS com Map.
-// Agora usa a RPC `get_pedidos_por_mes` — GROUP BY no Postgres, só o resultado chega ao Node.
 export async function obterPedidosPorMesAsync(meses: number = 6): Promise<PedidosPorMesDto[]> {
   const { data, error } = await supabase.rpc('get_pedidos_por_mes', { qtd_meses: meses });
 
@@ -57,8 +60,6 @@ export async function obterPedidosPorMesAsync(meses: number = 6): Promise<Pedido
 }
 
 // ─── Distribuição de Status ──────────────────────────────────────────
-// DBA-003: antes buscava todos os status e contava em JS.
-// Agora usa a RPC `get_distribuicao_status_pedidos` — GROUP BY no Postgres.
 export async function obterDistribuicaoStatusAsync(): Promise<DistribuicaoStatusDto[]> {
   const { data, error } = await supabase.rpc('get_distribuicao_status_pedidos');
 
@@ -72,13 +73,26 @@ export async function obterDistribuicaoStatusAsync(): Promise<DistribuicaoStatus
   }));
 }
 
+// ─── Produtos Mais Vendidos ──────────────────────────────────────────
+export async function obterProdutosMaisVendidosAsync(limite: number = 5): Promise<ProdutoMaisVendidoDto[]> {
+  const { data, error } = await supabase.rpc('get_produtos_mais_vendidos', { limite });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row: any) => ({
+    nome: row.nome,
+    quantidadeVendida: Number(row.quantidade_vendida),
+  }));
+}
+
 // ─── Dashboard Completo ──────────────────────────────────────────────
 export async function obterDashboardCompletoAsync(): Promise<DashboardCompletoDto> {
-  const [kpis, pedidosPorMes, distribuicaoStatus] = await Promise.all([
+  const [kpis, pedidosPorMes, distribuicaoStatus, produtosMaisVendidos] = await Promise.all([
     obterKpisAsync(),
     obterPedidosPorMesAsync(),
     obterDistribuicaoStatusAsync(),
+    obterProdutosMaisVendidosAsync(),
   ]);
 
-  return { kpis, pedidosPorMes, distribuicaoStatus };
+  return { kpis, pedidosPorMes, distribuicaoStatus, produtosMaisVendidos };
 }
