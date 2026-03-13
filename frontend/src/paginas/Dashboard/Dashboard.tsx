@@ -62,39 +62,42 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
   };
 
   return (
-    <div className="relative rounded-2xl bg-grafite-800 shadow-lg">
-      {/* Decoração de fundo */}
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 to-black shadow-xl shadow-black/20">
+      {/* Decoração de fundo premium */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-primary-500/10 blur-3xl" />
-        <div className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-primary-600/5 blur-3xl" />
+        <div className="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-cyan-500/8 blur-3xl" />
+        <div className="absolute -bottom-12 -left-12 h-56 w-56 rounded-full bg-purple-500/6 blur-3xl" />
+        <div className="absolute right-1/3 top-1/2 h-32 w-32 rounded-full bg-blue-500/5 blur-2xl" />
       </div>
+      {/* Borda sutil gradiente no topo */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
 
       {/* ─── Topo: Dica do Dia ─── */}
       <div className="relative z-10 flex items-start gap-4 p-6">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-500/20 text-2xl">
-          ✨
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 text-2xl ring-1 ring-white/10">
+          🤖
         </div>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-grafite-300">Dica do Dia</h3>
-            <span className="inline-flex items-center rounded-full bg-primary-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-400">
-              IA
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">Consultor Virtual</h3>
+            <span className="inline-flex items-center rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-400 ring-1 ring-cyan-500/20">
+              Grok IA
             </span>
           </div>
           {carregandoInsight ? (
             <div className="space-y-2.5 pt-1">
-              <div className="h-4 w-full animate-pulse rounded-lg bg-grafite-700" />
-              <div className="h-4 w-3/4 animate-pulse rounded-lg bg-grafite-700" />
+              <div className="h-4 w-full animate-pulse rounded-lg bg-white/5" />
+              <div className="h-4 w-3/4 animate-pulse rounded-lg bg-white/5" />
             </div>
           ) : (
-            <p className="text-[15px] leading-relaxed text-grafite-100">{insight}</p>
+            <p className="text-[15px] leading-relaxed text-slate-100">{insight}</p>
           )}
         </div>
 
         {/* Botão abrir/fechar chat */}
         <button
           onClick={() => setChatAberto((v) => !v)}
-          className="shrink-0 flex items-center gap-1.5 rounded-xl bg-primary-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-600 active:scale-95"
+          className="shrink-0 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:from-cyan-500 hover:to-blue-500 active:scale-95"
         >
           {chatAberto ? '✕ Fechar' : '💬 Perguntar'}
         </button>
@@ -102,11 +105,11 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
 
       {/* ─── Chat ─── */}
       {chatAberto && (
-        <div className="relative z-10 flex h-80 flex-col border-t border-grafite-700">
+        <div className="relative z-10 flex h-80 flex-col border-t border-white/10">
           {/* Histórico — ocupa o espaço restante e scrolla */}
           <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
             {historico.length === 0 && (
-              <p className="text-center text-sm text-grafite-400">Pergunte qualquer coisa sobre a sua loja 👇</p>
+              <p className="text-center text-sm text-slate-400">Pergunte qualquer coisa sobre a sua loja 👇</p>
             )}
             {historico.map((msg, i) => (
               <div
@@ -116,8 +119,8 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'rounded-br-sm bg-primary-500 text-white font-medium'
-                      : 'rounded-bl-sm bg-grafite-700 text-grafite-100'
+                      ? 'rounded-br-sm bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-medium'
+                      : 'rounded-bl-sm bg-white/10 text-slate-100'
                   }`}
                 >
                   {msg.content}
@@ -126,11 +129,11 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
             ))}
             {enviando && (
               <div className="flex justify-start">
-                <div className="rounded-2xl rounded-bl-sm bg-grafite-700 px-4 py-3">
+                <div className="rounded-2xl rounded-bl-sm bg-white/10 px-4 py-3">
                   <div className="flex gap-1">
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-grafite-400" style={{ animationDelay: '0ms' }} />
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-grafite-400" style={{ animationDelay: '150ms' }} />
-                    <span className="h-2 w-2 animate-bounce rounded-full bg-grafite-400" style={{ animationDelay: '300ms' }} />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '0ms' }} />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '150ms' }} />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -139,7 +142,7 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
           </div>
 
           {/* Input */}
-          <div className="flex gap-2 border-t border-grafite-700 p-3">
+          <div className="flex gap-2 border-t border-white/10 p-3">
             <input
               type="text"
               value={mensagem}
@@ -147,12 +150,12 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
               onKeyDown={handleKeyDown}
               placeholder="Ex: Por que os cancelamentos estão altos?"
               disabled={enviando}
-              className="flex-1 rounded-xl bg-grafite-700 px-4 py-2.5 text-sm text-grafite-100 placeholder-grafite-500 outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none focus:ring-2 focus:ring-cyan-500/50 disabled:opacity-50"
             />
             <button
               onClick={enviar}
               disabled={enviando || !mensagem.trim()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white transition hover:bg-primary-600 active:scale-95 disabled:opacity-40"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/20 transition hover:from-cyan-500 hover:to-blue-500 active:scale-95 disabled:opacity-40"
             >
               ➤
             </button>

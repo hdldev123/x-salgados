@@ -1,6 +1,7 @@
 /**
  * Serviço de IA — Gera insights de negócio.
  * Providers suportados (em ordem de prioridade):
+ *   0. Grok  (GROK_API_KEY)  — xAI, rápido e perspicaz
  *   1. Groq  (GROQ_API_KEY)  — gratuito, rápido
  *   2. Gemini (GEMINI_API_KEY) — Google AI
  *   3. OpenAI (OPENAI_API_KEY) — pago
@@ -9,7 +10,9 @@
  * Resiliência: qualquer falha retorna mensagem padrão amigável.
  */
 
-const PROMPT_SISTEMA = `Você é um consultor financeiro de restaurantes. Analise estas métricas de vendas de hoje e forneça 1 dica curta (máximo 2 frases) de negócio ou marketing para aumentar os lucros. Seja direto, amigável e use emojis.`;
+import OpenAI from 'openai';
+
+const PROMPT_SISTEMA = `Você é o Grok, um consultor de negócios afiado e perspicaz para restaurantes. Analise estas métricas de vendas de hoje e forneça 1 dica curta (máximo 2 frases) de negócio ou marketing para aumentar os lucros. Seja direto, sagaz e use emojis.`;
 
 const MENSAGEM_PADRAO =
   '💡 Dica do dia: Continue focando na qualidade e no atendimento para fidelizar seus clientes! Pequenos ajustes no cardápio podem trazer grandes resultados.';
@@ -26,10 +29,20 @@ export interface MetricasInsight {
 }
 
 /**
- * Tenta gerar um insight em ordem: Groq → Gemini → OpenAI → fallback.
+ * Tenta gerar um insight em ordem: Grok (xAI) → Groq → Gemini → OpenAI → fallback.
  */
 export async function gerarInsightDeNegocio(metricas: MetricasInsight): Promise<string> {
   const resumo = montarResumo(metricas);
+
+  // 0) Grok (xAI) — prioridade máxima
+  const grokKey = process.env.GROK_API_KEY;
+  if (grokKey) {
+    try {
+      return await chamarGrok(grokKey, resumo);
+    } catch (err) {
+      console.error('[AI Service] Erro ao chamar Grok (xAI):', err);
+    }
+  }
 
   // 1) Groq (gratuito)
   const groqKey = process.env.GROQ_API_KEY;
@@ -61,7 +74,7 @@ export async function gerarInsightDeNegocio(metricas: MetricasInsight): Promise<
     }
   }
 
-  if (!groqKey && !geminiKey && !openaiKey) {
+  if (!grokKey && !groqKey && !geminiKey && !openaiKey) {
     console.warn('[AI Service] Nenhuma chave de IA configurada. Usando mensagem padrão.');
   }
 
@@ -99,6 +112,16 @@ export async function chatComIA(
     ...historico.slice(-10), // mantém últimas 10 mensagens para contexto
     { role: 'user' as const, content: mensagem },
   ];
+
+  // 0) Grok (xAI)
+  const grokKey = process.env.GROK_API_KEY;
+  if (grokKey) {
+    try {
+      return await chamarGrokChat(grokKey, mensagens);
+    } catch (err) {
+      console.error('[AI Chat] Erro Grok (xAI):', err);
+    }
+  }
 
   // 1) Groq
   const groqKey = process.env.GROQ_API_KEY;
@@ -139,6 +162,40 @@ function montarResumo(m: MetricasInsight): string {
     `Cancelados: ${m.totalPedidosCancelados} (perda: R$ ${m.receitaCancelada.toFixed(2)})`,
     `Produtos mais vendidos: ${produtos || 'nenhum dado'}`,
   ].join(' | ');
+}
+
+// ─── Grok — xAI (via SDK openai) ────────────────────────────────────────────────
+
+function criarClienteGrok(apiKey: string): OpenAI {
+  return new OpenAI({ apiKey, baseURL: 'https://api.x.ai/v1' });
+}
+
+async function chamarGrok(apiKey: string, resumoVendas: string): Promise<string> {
+  const client = criarClienteGrok(apiKey);
+  const completion = await client.chat.completions.create({
+    model: 'grok-2-latest',
+    max_tokens: 200,
+    temperature: 0.7,
+    messages: [
+      { role: 'system', content: PROMPT_SISTEMA },
+      { role: 'user', content: `Métricas de vendas:\n${resumoVendas}` },
+    ],
+  });
+  return completion.choices[0]?.message?.content?.trim() || MENSAGEM_PADRAO;
+}
+
+async function chamarGrokChat(
+  apiKey: string,
+  mensagens: { role: 'system' | 'user' | 'assistant'; content: string }[],
+): Promise<string> {
+  const client = criarClienteGrok(apiKey);
+  const completion = await client.chat.completions.create({
+    model: 'grok-2-latest',
+    max_tokens: 300,
+    temperature: 0.7,
+    messages: mensagens,
+  });
+  return completion.choices[0]?.message?.content?.trim() || MENSAGEM_PADRAO;
 }
 
 // ─── Groq (gratuito, rápido) ────────────────────────────────────────────────────
