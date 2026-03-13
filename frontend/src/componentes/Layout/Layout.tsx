@@ -28,7 +28,7 @@ const Layout: React.FC = () => {
       <BarraLateral aberto={menuAberto} onFechar={fecharMenu} />
 
       {/* ─── Conteúdo principal ─── */}
-      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 overflow-y-auto pt-18 px-4 pb-6 sm:px-6 sm:pb-8 lg:pt-8 lg:px-8 lg:pb-8">
         <div className="mx-auto w-full max-w-7xl">
           <Outlet />
         </div>
