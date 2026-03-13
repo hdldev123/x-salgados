@@ -215,14 +215,14 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanban
         </p>
       </div>
 
-      {/* Grid de 5 colunas */}
-      <div className="grid min-h-[70vh] grid-cols-1 gap-5 lg:grid-cols-5">
+      {/* Grid de 5 colunas — scroll horizontal no mobile */}
+      <div className="flex min-h-[70vh] gap-4 overflow-x-auto pb-4 snap-x snap-mandatory lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-x-visible lg:pb-0">
         {Object.entries(STATUS_CONFIG)
           .sort(([, a], [, b]) => a.ordem - b.ordem)
           .map(([status, config]) => (
             <div
               key={status}
-              className="flex flex-col overflow-hidden rounded-2xl border border-grafite-200 bg-white shadow-soft"
+              className="flex w-72 shrink-0 snap-center flex-col overflow-hidden rounded-2xl border border-grafite-200 bg-white shadow-soft lg:w-auto lg:shrink"
             >
               {/* Cabeçalho da coluna */}
               <div

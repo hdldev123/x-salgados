@@ -152,9 +152,9 @@ function RotasDeEntrega() {
   return (
     <div className="animate-fade-in">
       {/* Cabeçalho */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:gap-4 sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-grafite-800">Lote de Entrega</h1>
+          <h1 className="text-2xl font-bold text-grafite-800 sm:text-3xl">Lote de Entrega</h1>
           <p className="mt-1 text-sm text-grafite-400">
             Pedidos prontos acumulados — capacidade por lote: {VOLUME_MINIMO} a {CAPACIDADE_MAXIMA} unidades
           </p>
@@ -255,21 +255,21 @@ function RotasDeEntrega() {
                     </div>
 
                     {/* Estatísticas em grid */}
-                    <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      <div className="rounded-xl bg-grafite-50 p-4 text-center">
-                        <span className="block text-2xl font-bold text-primary-500">{lote.totalItens}</span>
+                    <div className="mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:gap-4 sm:grid-cols-4">
+                      <div className="rounded-xl bg-grafite-50 p-3 text-center sm:p-4">
+                        <span className="block text-xl font-bold text-primary-500 sm:text-2xl">{lote.totalItens}</span>
                         <span className="text-xs font-medium uppercase tracking-wider text-grafite-400">Itens Acumulados</span>
                       </div>
-                      <div className="rounded-xl bg-grafite-50 p-4 text-center">
-                        <span className="block text-2xl font-bold text-primary-500">{VOLUME_MINIMO}</span>
+                      <div className="rounded-xl bg-grafite-50 p-3 text-center sm:p-4">
+                        <span className="block text-xl font-bold text-primary-500 sm:text-2xl">{VOLUME_MINIMO}</span>
                         <span className="text-xs font-medium uppercase tracking-wider text-grafite-400">Volume Mínimo</span>
                       </div>
-                      <div className="rounded-xl bg-grafite-50 p-4 text-center">
-                        <span className="block text-2xl font-bold text-primary-500">{lote.pedidos.length}</span>
+                      <div className="rounded-xl bg-grafite-50 p-3 text-center sm:p-4">
+                        <span className="block text-xl font-bold text-primary-500 sm:text-2xl">{lote.pedidos.length}</span>
                         <span className="text-xs font-medium uppercase tracking-wider text-grafite-400">Pedidos</span>
                       </div>
-                      <div className="rounded-xl bg-grafite-50 p-4 text-center">
-                        <span className="block text-2xl font-bold text-primary-500">{formatarMoeda(lote.valorTotal)}</span>
+                      <div className="rounded-xl bg-grafite-50 p-3 text-center sm:p-4">
+                        <span className="block text-xl font-bold text-primary-500 sm:text-2xl">{formatarMoeda(lote.valorTotal)}</span>
                         <span className="text-xs font-medium uppercase tracking-wider text-grafite-400">Valor Total</span>
                       </div>
                     </div>

@@ -73,9 +73,11 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
 
       {/* ─── Topo: Dica do Dia ─── */}
-      <div className="relative z-10 flex items-start gap-4 p-6">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 text-2xl ring-1 ring-white/10">
-          🤖
+      <div className="relative z-10 flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4 sm:p-6">
+        <div className="flex items-center gap-3 sm:block">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 text-xl ring-1 ring-white/10 sm:h-12 sm:w-12 sm:text-2xl">
+            🤖
+          </div>
         </div>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
@@ -97,7 +99,7 @@ function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
         {/* Botão abrir/fechar chat */}
         <button
           onClick={() => setChatAberto((v) => !v)}
-          className="shrink-0 flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:from-cyan-500 hover:to-blue-500 active:scale-95"
+          className="w-full shrink-0 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 transition hover:from-cyan-500 hover:to-blue-500 active:scale-95 sm:w-auto"
         >
           {chatAberto ? '✕ Fechar' : '💬 Perguntar'}
         </button>
@@ -293,10 +295,10 @@ function Dashboard() {
   }));
 
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-6 sm:space-y-8">
       {/* ═══ Título ═══ */}
       <div>
-        <h1 className="text-3xl font-bold text-grafite-800">Relatório de Vendas</h1>
+        <h1 className="text-2xl font-bold text-grafite-800 sm:text-3xl">Relatório de Vendas</h1>
         <p className="mt-1 text-sm text-grafite-400">Visão geral do desempenho do negócio</p>
       </div>
 
@@ -304,7 +306,7 @@ function Dashboard() {
       <CardConsultorIA insight={insight} carregandoInsight={carregandoInsight} />
 
       {/* ═══ KPI Cards ═══ */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
         <KpiCard
           titulo="Receita Total"
           valor={formatarMoeda(kpis.receitaTotal)}
@@ -329,9 +331,9 @@ function Dashboard() {
       </div>
 
       {/* ═══ Gráficos: BarChart + PieChart ═══ */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
         {/* ─── BarChart: Top 5 Produtos ─── */}
-        <div className="rounded-2xl border border-grafite-200 bg-white p-6 shadow-soft">
+        <div className="rounded-2xl border border-grafite-200 bg-white p-4 shadow-soft sm:p-6">
           <h3 className="mb-4 text-lg font-semibold text-grafite-800">
             🏆 Ranking – Produtos Mais Vendidos
           </h3>
@@ -367,7 +369,7 @@ function Dashboard() {
         </div>
 
         {/* ─── PieChart: Sucesso vs Cancelados ─── */}
-        <div className="rounded-2xl border border-grafite-200 bg-white p-6 shadow-soft">
+        <div className="rounded-2xl border border-grafite-200 bg-white p-4 shadow-soft sm:p-6">
           <h3 className="mb-4 text-lg font-semibold text-grafite-800">
             📊 Proporção: Concluídos vs Cancelados
           </h3>
@@ -408,7 +410,7 @@ function Dashboard() {
       </div>
 
       {/* ═══ LineChart: Vendas nos Últimos 6 Meses ═══ */}
-      <div className="rounded-2xl border border-grafite-200 bg-white p-8 shadow-soft">
+      <div className="rounded-2xl border border-grafite-200 bg-white p-4 shadow-soft sm:p-8">
         <h3 className="mb-6 text-xl font-semibold text-grafite-800">📈 Vendas nos Últimos 6 Meses</h3>
         {vendasData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
