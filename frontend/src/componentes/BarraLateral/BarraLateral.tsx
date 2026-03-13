@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useContext, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { ContextoAutenticacao } from '../../contextos/ContextoAutenticacao';
 import {
-  FiHome, FiClipboard, FiUsers, FiBox, FiUser, FiTruck, FiLogOut, FiXCircle
+  FiHome, FiClipboard, FiUsers, FiBox, FiUser, FiTruck, FiLogOut, FiXCircle, FiChevronDown, FiList
 } from 'react-icons/fi';
 import { RoleUsuario } from '../../types';
 
@@ -13,10 +13,30 @@ interface MenuItem {
   papeis: RoleUsuario[];
 }
 
-const menuItens: MenuItem[] = [
+interface MenuItemComSub {
+  icone: React.ReactNode;
+  texto: string;
+  papeis: RoleUsuario[];
+  filhos: MenuItem[];
+}
+
+type ItemMenu = MenuItem | MenuItemComSub;
+
+function temFilhos(item: ItemMenu): item is MenuItemComSub {
+  return 'filhos' in item;
+}
+
+const menuItens: ItemMenu[] = [
   { icone: <FiHome />, texto: "Dashboard", para: "/", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
-  { icone: <FiClipboard />, texto: "Pedidos", para: "/pedidos", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
-  { icone: <FiXCircle className="text-erro" />, texto: "Pedidos Cancelados", para: "/pedidos-cancelados", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
+  {
+    icone: <FiClipboard />,
+    texto: "Pedidos",
+    papeis: ['ADMINISTRADOR', 'ATENDENTE'],
+    filhos: [
+      { icone: <FiList />, texto: "Todos os Pedidos", para: "/pedidos", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
+      { icone: <FiXCircle className="text-erro" />, texto: "Cancelados", para: "/pedidos-cancelados", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
+    ],
+  },
   { icone: <FiUsers />, texto: "Clientes", para: "/clientes", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
   { icone: <FiBox />, texto: "Produtos", para: "/produtos", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
   { icone: <FiUser />, texto: "Usuários", para: "/usuarios", papeis: ['ADMINISTRADOR'] },
@@ -25,6 +45,10 @@ const menuItens: MenuItem[] = [
 
 const BarraLateral: React.FC = () => {
   const contexto = useContext(ContextoAutenticacao);
+  const location = useLocation();
+
+  const pedidosAtivo = location.pathname.startsWith('/pedidos');
+  const [pedidosAberto, setPedidosAberto] = useState(pedidosAtivo);
 
   if (!contexto || !contexto.usuario) {
     return null;
@@ -45,24 +69,75 @@ const BarraLateral: React.FC = () => {
       <nav className="mt-4 flex-1 px-3">
         <ul className="space-y-1">
           {menuItens
-            .filter(item => item.papeis.includes(usuario.role))
-            .map((item, index) => (
-              <li key={index}>
-                <NavLink
-                  to={item.para}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
-                      ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
-                      : 'text-grafite-500 hover:bg-primary-50 hover:text-primary-600 hover:translate-x-1'
-                    }`
-                  }
-                  end={item.para === "/"}
-                >
-                  <span className="text-lg">{item.icone}</span>
-                  <span>{item.texto}</span>
-                </NavLink>
-              </li>
-            ))}
+            .filter(item => item.papeis.some(p => usuario.role === p))
+            .map((item, index) => {
+              if (temFilhos(item)) {
+                const ativo = item.filhos.some(f => location.pathname.startsWith(f.para));
+                const aberto = pedidosAberto;
+                return (
+                  <li key={index}>
+                    {/* Cabeçalho do grupo */}
+                    <button
+                      onClick={() => setPedidosAberto((v) => !v)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
+                        ativo
+                          ? 'bg-primary-50 text-primary-600'
+                          : 'text-grafite-500 hover:bg-primary-50 hover:text-primary-600'
+                      }`}
+                    >
+                      <span className="text-lg">{item.icone}</span>
+                      <span className="flex-1 text-left">{item.texto}</span>
+                      <FiChevronDown
+                        className={`text-base transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {/* Sub-itens */}
+                    {aberto && (
+                      <ul className="mt-1 space-y-1 pl-4">
+                        {item.filhos
+                          .filter(f => f.papeis.some(p => usuario.role === p))
+                          .map((filho, fi) => (
+                            <li key={fi}>
+                              <NavLink
+                                to={filho.para}
+                                className={({ isActive }) =>
+                                  `flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                                    isActive
+                                      ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
+                                      : 'text-grafite-500 hover:bg-primary-50 hover:text-primary-600 hover:translate-x-1'
+                                  }`
+                                }
+                              >
+                                <span className="text-base">{filho.icone}</span>
+                                <span>{filho.texto}</span>
+                              </NavLink>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+
+              return (
+                <li key={index}>
+                  <NavLink
+                    to={(item as MenuItem).para}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
+                        ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
+                        : 'text-grafite-500 hover:bg-primary-50 hover:text-primary-600 hover:translate-x-1'
+                      }`
+                    }
+                    end={(item as MenuItem).para === "/"}
+                  >
+                    <span className="text-lg">{item.icone}</span>
+                    <span>{item.texto}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
         </ul>
       </nav>
 

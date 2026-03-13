@@ -29,3 +29,31 @@ export const buscarDashboardCompleto = async (): Promise<DashboardCompletoRespon
   const response = await api.get('/api/dashboard/completo');
   return response.data;
 };
+
+// ─── Insight de IA ──────────────────────────────────────────────────
+export interface InsightIAResponse {
+  insight: string;
+}
+
+export const buscarInsightIA = async (): Promise<InsightIAResponse> => {
+  const response = await api.get('/api/dashboard/insight', { timeout: 30000 });
+  return response.data;
+};
+
+// ─── Chat com IA ────────────────────────────────────────────────────
+export interface MensagemChat {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatIAResponse {
+  resposta: string;
+}
+
+export const enviarMensagemIA = async (
+  mensagem: string,
+  historico: MensagemChat[] = [],
+): Promise<ChatIAResponse> => {
+  const response = await api.post('/api/dashboard/chat', { mensagem, historico }, { timeout: 30000 });
+  return response.data;
+};

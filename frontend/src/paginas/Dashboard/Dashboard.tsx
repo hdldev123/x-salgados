@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { buscarDashboardCompleto, DashboardCompletoResponse } from '../../servicos/apiDashboard';
+import React, { useState, useEffect, useRef } from 'react';
+import { buscarDashboardCompleto, DashboardCompletoResponse, buscarInsightIA, enviarMensagemIA, MensagemChat } from '../../servicos/apiDashboard';
 import Spinner from '../../componentes/Spinner/Spinner';
 
 import {
@@ -14,6 +14,154 @@ const formatarMoeda = (valor: number | undefined) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
 
 const CORES_PIE = ['#16a34a', '#dc2626']; // sucesso, erro
+
+// ─── Card Consultor IA (Insight + Chat) ─────────────────────────────
+interface CardConsultorIAProps {
+  insight: string | null;
+  carregandoInsight: boolean;
+}
+
+function CardConsultorIA({ insight, carregandoInsight }: CardConsultorIAProps) {
+  const [chatAberto, setChatAberto] = useState(false);
+  const [historico, setHistorico] = useState<MensagemChat[]>([]);
+  const [mensagem, setMensagem] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const fimChatRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatAberto) {
+      fimChatRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [historico, chatAberto]);
+
+  const enviar = async () => {
+    const texto = mensagem.trim();
+    if (!texto || enviando) return;
+
+    const novaMensagem: MensagemChat = { role: 'user', content: texto };
+    const novoHistorico = [...historico, novaMensagem];
+    setHistorico(novoHistorico);
+    setMensagem('');
+    setEnviando(true);
+
+    try {
+      const res = await enviarMensagemIA(texto, historico);
+      setHistorico([...novoHistorico, { role: 'assistant', content: res.resposta }]);
+    } catch {
+      setHistorico([...novoHistorico, { role: 'assistant', content: '🤖 Erro ao processar. Tente novamente.' }]);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviar();
+    }
+  };
+
+  return (
+    <div className="relative rounded-2xl bg-grafite-800 shadow-lg">
+      {/* Decoração de fundo */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+        <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-primary-500/10 blur-3xl" />
+        <div className="absolute -bottom-8 -left-8 h-40 w-40 rounded-full bg-primary-600/5 blur-3xl" />
+      </div>
+
+      {/* ─── Topo: Dica do Dia ─── */}
+      <div className="relative z-10 flex items-start gap-4 p-6">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-500/20 text-2xl">
+          ✨
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-2">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-grafite-300">Dica do Dia</h3>
+            <span className="inline-flex items-center rounded-full bg-primary-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-400">
+              IA
+            </span>
+          </div>
+          {carregandoInsight ? (
+            <div className="space-y-2.5 pt-1">
+              <div className="h-4 w-full animate-pulse rounded-lg bg-grafite-700" />
+              <div className="h-4 w-3/4 animate-pulse rounded-lg bg-grafite-700" />
+            </div>
+          ) : (
+            <p className="text-[15px] leading-relaxed text-grafite-100">{insight}</p>
+          )}
+        </div>
+
+        {/* Botão abrir/fechar chat */}
+        <button
+          onClick={() => setChatAberto((v) => !v)}
+          className="shrink-0 flex items-center gap-1.5 rounded-xl bg-primary-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-600 active:scale-95"
+        >
+          {chatAberto ? '✕ Fechar' : '💬 Perguntar'}
+        </button>
+      </div>
+
+      {/* ─── Chat ─── */}
+      {chatAberto && (
+        <div className="relative z-10 flex h-80 flex-col border-t border-grafite-700">
+          {/* Histórico — ocupa o espaço restante e scrolla */}
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+            {historico.length === 0 && (
+              <p className="text-center text-sm text-grafite-400">Pergunte qualquer coisa sobre a sua loja 👇</p>
+            )}
+            {historico.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'rounded-br-sm bg-primary-500 text-white font-medium'
+                      : 'rounded-bl-sm bg-grafite-700 text-grafite-100'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {enviando && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-sm bg-grafite-700 px-4 py-3">
+                  <div className="flex gap-1">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-grafite-400" style={{ animationDelay: '0ms' }} />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-grafite-400" style={{ animationDelay: '150ms' }} />
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-grafite-400" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={fimChatRef} />
+          </div>
+
+          {/* Input */}
+          <div className="flex gap-2 border-t border-grafite-700 p-3">
+            <input
+              type="text"
+              value={mensagem}
+              onChange={(e) => setMensagem(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ex: Por que os cancelamentos estão altos?"
+              disabled={enviando}
+              className="flex-1 rounded-xl bg-grafite-700 px-4 py-2.5 text-sm text-grafite-100 placeholder-grafite-500 outline-none focus:ring-2 focus:ring-primary-500/50 disabled:opacity-50"
+            />
+            <button
+              onClick={enviar}
+              disabled={enviando || !mensagem.trim()}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white transition hover:bg-primary-600 active:scale-95 disabled:opacity-40"
+            >
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Componente KPI Card ─────────────────────────────────────────────
 interface KpiCardProps {
@@ -62,6 +210,10 @@ function Dashboard() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
+  // Estado separado para o insight de IA (não bloqueia o dashboard)
+  const [insight, setInsight] = useState<string | null>(null);
+  const [carregandoInsight, setCarregandoInsight] = useState(true);
+
   useEffect(() => {
     const carregar = async () => {
       try {
@@ -75,6 +227,22 @@ function Dashboard() {
       }
     };
     carregar();
+  }, []);
+
+  // useEffect separado para carregar o insight de IA de forma independente
+  useEffect(() => {
+    const carregarInsight = async () => {
+      try {
+        setCarregandoInsight(true);
+        const resultado = await buscarInsightIA();
+        setInsight(resultado.insight);
+      } catch {
+        setInsight('💡 Dica do dia: Continue focando na qualidade e no atendimento para fidelizar seus clientes!');
+      } finally {
+        setCarregandoInsight(false);
+      }
+    };
+    carregarInsight();
   }, []);
 
   // ─── Loading ──────────────────────────────────────────────────────
@@ -128,6 +296,9 @@ function Dashboard() {
         <h1 className="text-3xl font-bold text-grafite-800">Relatório de Vendas</h1>
         <p className="mt-1 text-sm text-grafite-400">Visão geral do desempenho do negócio</p>
       </div>
+
+      {/* ═══ Card Insight IA ═══ */}
+      <CardConsultorIA insight={insight} carregandoInsight={carregandoInsight} />
 
       {/* ═══ KPI Cards ═══ */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">

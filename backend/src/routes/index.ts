@@ -268,6 +268,20 @@ router.get(
   dashboardController.obterDashboardCompleto,
 );
 
+router.get(
+  '/api/dashboard/insight',
+  authenticate,
+  authorize('Administrador'),
+  dashboardController.obterInsightIA,
+);
+
+router.post(
+  '/api/dashboard/chat',
+  authenticate,
+  authorize('Administrador'),
+  dashboardController.chatIA,
+);
+
 // ═══════════════════════════════════════════════════════════════════════
 // WHATSAPP WEBHOOK — Validado por token (WHATSAPP_WEBHOOK_TOKEN no .env)
 // ═══════════════════════════════════════════════════════════════════════
