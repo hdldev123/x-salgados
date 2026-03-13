@@ -1,8 +1,8 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ContextoAutenticacao } from '../../contextos/ContextoAutenticacao';
 import {
-  FiHome, FiClipboard, FiUsers, FiBox, FiUser, FiTruck, FiLogOut, FiXCircle, FiChevronDown, FiList
+  FiHome, FiClipboard, FiUsers, FiBox, FiUser, FiTruck, FiLogOut, FiXCircle, FiChevronDown, FiList, FiX
 } from 'react-icons/fi';
 import { RoleUsuario } from '../../types';
 
@@ -43,12 +43,22 @@ const menuItens: ItemMenu[] = [
   { icone: <FiTruck />, texto: "Rotas de Entrega", para: "/entregas", papeis: ['ENTREGADOR'] },
 ];
 
-const BarraLateral: React.FC = () => {
+interface BarraLateralProps {
+  aberto: boolean;
+  onFechar: () => void;
+}
+
+const BarraLateral: React.FC<BarraLateralProps> = ({ aberto, onFechar }) => {
   const contexto = useContext(ContextoAutenticacao);
   const location = useLocation();
 
   const pedidosAtivo = location.pathname.startsWith('/pedidos');
   const [pedidosAberto, setPedidosAberto] = useState(pedidosAtivo);
+
+  // Fechar menu mobile ao navegar
+  useEffect(() => {
+    onFechar();
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!contexto || !contexto.usuario) {
     return null;
@@ -56,27 +66,37 @@ const BarraLateral: React.FC = () => {
 
   const { usuario, logout } = contexto;
 
-  return (
-    <aside className="flex w-64 flex-col border-r border-grafite-200 bg-white shadow-soft">
+  const conteudoMenu = (
+    <>
+      {/* Logo — visível apenas no sidebar (desktop e drawer mobile) */}
       <div className="border-b border-grafite-200 px-6 py-5 text-center">
-        <img
-          src="/logo.png"
-          alt="Rangô"
-          className="mx-auto h-20 w-auto object-contain"
-        />
+        <div className="flex items-center justify-between lg:justify-center">
+          <img
+            src="/logo.png"
+            alt="Rangô"
+            className="h-16 w-auto object-contain lg:h-20"
+          />
+          {/* Botão fechar — apenas no mobile */}
+          <button
+            onClick={onFechar}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-grafite-400 transition-colors hover:bg-grafite-100 hover:text-grafite-600 lg:hidden"
+            aria-label="Fechar menu"
+          >
+            <FiX className="text-xl" />
+          </button>
+        </div>
       </div>
 
-      <nav className="mt-4 flex-1 px-3">
+      <nav className="mt-4 flex-1 overflow-y-auto px-3">
         <ul className="space-y-1">
           {menuItens
             .filter(item => item.papeis.some(p => usuario.role === p))
             .map((item, index) => {
               if (temFilhos(item)) {
                 const ativo = item.filhos.some(f => location.pathname.startsWith(f.para));
-                const aberto = pedidosAberto;
+                const subAberto = pedidosAberto;
                 return (
                   <li key={index}>
-                    {/* Cabeçalho do grupo */}
                     <button
                       onClick={() => setPedidosAberto((v) => !v)}
                       className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
@@ -88,12 +108,11 @@ const BarraLateral: React.FC = () => {
                       <span className="text-lg">{item.icone}</span>
                       <span className="flex-1 text-left">{item.texto}</span>
                       <FiChevronDown
-                        className={`text-base transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`}
+                        className={`text-base transition-transform duration-200 ${subAberto ? 'rotate-180' : ''}`}
                       />
                     </button>
 
-                    {/* Sub-itens */}
-                    {aberto && (
+                    {subAberto && (
                       <ul className="mt-1 space-y-1 pl-4">
                         {item.filhos
                           .filter(f => f.papeis.some(p => usuario.role === p))
@@ -154,7 +173,32 @@ const BarraLateral: React.FC = () => {
           <FiLogOut className="text-lg" />
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* ─── Overlay escuro (mobile only) ─── */}
+      {aberto && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity lg:hidden"
+          onClick={onFechar}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* ─── Sidebar como Drawer (mobile) / Fixa (desktop) ─── */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-grafite-200 bg-white shadow-soft
+          transition-transform duration-300 ease-in-out
+          ${aberto ? 'translate-x-0' : '-translate-x-full'}
+          lg:static lg:z-auto lg:translate-x-0 lg:transition-none
+        `}
+      >
+        {conteudoMenu}
+      </aside>
+    </>
   );
 };
 

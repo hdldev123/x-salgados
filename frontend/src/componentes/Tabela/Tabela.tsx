@@ -18,14 +18,14 @@ function Tabela<T extends { id?: number | string }>({ colunas, dados }: TabelaPr
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-grafite-200 bg-white shadow-soft">
-      <table className="w-full border-collapse">
+    <div className="w-full overflow-x-auto rounded-2xl border border-grafite-200 bg-white shadow-soft">
+      <table className="w-full min-w-[600px] border-collapse">
         <thead>
           <tr>
             {colunas.map((coluna, index) => (
               <th
                 key={index}
-                className="sticky top-0 z-10 border-b border-grafite-200 bg-grafite-50 px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-grafite-600"
+                className="sticky top-0 z-10 whitespace-nowrap border-b border-grafite-200 bg-grafite-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-grafite-600 sm:px-6"
               >
                 {coluna.cabecalho}
               </th>
@@ -41,7 +41,7 @@ function Tabela<T extends { id?: number | string }>({ colunas, dados }: TabelaPr
               {colunas.map((coluna, colunaIndex) => (
                 <td
                   key={colunaIndex}
-                  className="px-6 py-4 text-sm text-grafite-700"
+                  className="whitespace-nowrap px-4 py-4 text-sm text-grafite-700 sm:px-6"
                 >
                   {coluna.render ? coluna.render(item) : (coluna.chave ? (item[coluna.chave] as unknown as React.ReactNode) : null)}
                 </td>
