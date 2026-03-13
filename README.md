@@ -1,227 +1,280 @@
-<div align="center">
+﻿<p align="center">
+  <img src="https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/xAI-Grok_2-000000?logo=x&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white&style=for-the-badge" />
+  <img src="https://img.shields.io/badge/WhatsApp-Bot_Nativo-25D366?logo=whatsapp&logoColor=white&style=for-the-badge" />
+</p>
 
-# 🍽️ Rangô
+<h1 align="center">🍽️ Rangô</h1>
 
-### Sistema de Gestão de Pedidos & Entregas
+<p align="center">
+  <strong>SaaS completo de gestão para fábrica de salgados — com Bot de WhatsApp nativo, IA de negócios e logística inteligente.</strong>
+</p>
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.2-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
-[![License](https://img.shields.io/badge/Licença-Privado-red)](#)
-
-> Plataforma web fullstack para gestão operacional — do pedido à entrega, com relatórios inteligentes.
-
-</div>
-
----
-
-## 📋 Sobre o Projeto
-
-O **Rangô** é uma aplicação web fullstack que substitui processos manuais (cadernos, planilhas, WhatsApp) por um fluxo digital centralizado. O sistema cobre o **ciclo operacional completo**:
-
-- 👥 Cadastro e gerenciamento de clientes
-- 📦 Catálogo de produtos com categorias e controle de preços
-- 🧾 Criação e acompanhamento de pedidos com fluxo de status completo
-- 🚚 Organização de rotas e lotes de entrega
-- 📊 **Relatório de Vendas** com KPIs, ranking de produtos e gráficos interativos
-- ❌ Rastreamento de pedidos cancelados e receita perdida
-
-### Perfis de Acesso (RBAC)
-
-| Perfil | Permissões |
-|---|---|
-| **Administrador** | Dashboard, Pedidos, Clientes, Produtos, Usuários, Entregas |
-| **Atendente** | Pedidos, Clientes, Produtos (somente leitura de preços) |
-| **Entregador** | Rotas de Entrega (visualizar, iniciar, confirmar) |
+<p align="center">
+  <em>Da conversa no WhatsApp até a entrega na porta do cliente, tudo num único sistema.</em>
+</p>
 
 ---
 
-## 📊 Dashboard — Relatório de Vendas
+## 📋 Sumário
 
-O painel de gestão oferece uma visão completa do desempenho do negócio:
+- [Sobre o Projeto](#-sobre-o-projeto)
+- [Features Principais](#-features-principais)
+- [Arquitetura de Alto Nível](#-arquitetura-de-alto-nível)
+- [Stack Tecnológica](#-stack-tecnológica)
+- [Deploy e Ambiente](#-deploy-e-ambiente)
+- [Variáveis de Ambiente](#-variáveis-de-ambiente)
+- [Scripts de Desenvolvimento](#-scripts-de-desenvolvimento)
+- [Estrutura do Repositório](#-estrutura-do-repositório)
+- [Documentação Complementar](#-documentação-complementar)
 
-| Componente | Descrição |
-|---|---|
-| 💰 **Card Receita Total** | Soma dos pedidos entregues + receita do dia |
-| ✅ **Card Pedidos Concluídos** | Contagem de entregas realizadas |
-| ❌ **Card Pedidos Cancelados** | Contagem + valor de receita perdida |
-| 🏆 **Ranking de Produtos** | BarChart horizontal com os Top 5 produtos mais vendidos |
-| 📊 **Proporção Sucesso/Cancelados** | PieChart donut comparando pedidos concluídos vs cancelados |
-| 📈 **Vendas Mensais** | LineChart com receita dos últimos 6 meses |
+---
 
-> Todas as métricas são calculadas diretamente no PostgreSQL via **RPCs otimizadas** (zero processamento em memória no Node.js).
+## 🎯 Sobre o Projeto
+
+O **Rangô** é uma plataforma integrada de gestão para fábricas de salgados que unifica vendas, produção, logística e inteligência de negócios em um único sistema. O diferencial está na automação completa do ciclo de vendas: o cliente faz o pedido diretamente pelo **WhatsApp** conversando com um bot inteligente, a equipe de produção gerencia os pedidos no dashboard web, e os entregadores recebem lotes otimizados para expedição — tudo sem intervenção manual.
+
+O sistema opera com **três perfis de utilizador** (Admin, Atendente, Entregador), cada um com acesso personalizado ao dashboard.
+
+---
+
+## ✨ Features Principais
+
+### 🤖 Bot de WhatsApp Multi-Itens (Baileys)
+- Conversa natural com o cliente para recolha de pedidos
+- **Carrinho de compras** com suporte a múltiplos produtos por pedido
+- Onboarding automático de novos clientes (nome, endereço)
+- Opções pré-definidas de quantidade: **100, 300, 500, 1.000** unidades
+- Consulta de status de pedido ativo, cancelamento e suporte
+- Resolução de **LID ↔ Telefone** para compatibilidade com WhatsApp Privacy Mode
+- Persistência de sessão via **Custom Supabase Auth State** — sobrevive a reinicializações do servidor
+
+### 🧠 Inteligência Artificial (Grok / xAI)
+- **Insights de negócios diários** gerados pelo Grok 2 diretamente no Dashboard
+- Chat interativo com contexto de métricas (receita, pedidos, produtos mais vendidos)
+- **Hierarquia de fallback**: Grok → Groq → Gemini → OpenAI → mensagem padrão
+- System prompt otimizado para dicas curtas e acionáveis de marketing/vendas
+
+### 🚚 Logística Inteligente — Gestão de Lotes
+- **Algoritmo de Bin Packing** que fraciona pedidos prontos em lotes de expedição
+- Capacidade máxima por lote: **1.000 unidades** · Volume mínimo para liberação: **900 unidades**
+- Barra de progresso visual por lote com indicador de ocupação
+- Liberação em lote com transição atômica de status (``Pronto → Em Entrega``)
+- Painel em tempo real de pedidos em trânsito com marcação individual de entrega
+
+### 📊 Dashboard Gerencial
+- KPIs em tempo real: receita do dia, pedidos concluídos, cancelamentos
+- Gráfico de barras — Top 5 produtos mais vendidos
+- Gráfico de rosca — Distribuição concluídos vs. cancelados
+- Gráfico de linha — Receita mensal (últimos 6 meses)
+- Card de Consultor IA com badge Grok integrado
+
+### 🎨 UI/UX Mobile-First
+- Design system baseado em **Tailwind CSS v4** com tema custom (Burnt Orange + Deep Graphite)
+- **Menu hambúrguer** responsivo com drawer deslizante e backdrop com blur
+- Sidebar fixa em desktop, drawer colapsável em mobile
+- Tabelas com scroll horizontal em ecrãs pequenos
+- Fonte Inter, tipografia otimizada para legibilidade
+
+### 🔐 Segurança & Autenticação
+- Autenticação JWT com hash bcrypt para senhas
+- Controle de acesso baseado em perfis (RBAC)
+- Rate limiting no login (10 tentativas / 15 min)
+- Helmet + CSP headers no backend
+- Validação runtime com **Zod** em todos os endpoints
+- Documentação automática via **Swagger/OpenAPI**
+
+---
+
+## 🏗️ Arquitetura de Alto Nível
+
+```
+┌──────────────────────────────────────────────────┐
+│              VERCEL (Frontend)                    │
+│    React 18 · Vite · Tailwind v4                 │
+│    SPA com vercel.json rewrite → index.html      │
+└───────────────────────┬──────────────────────────┘
+                        │ HTTPS (Axios)
+                        ▼
+┌──────────────────────────────────────────────────┐
+│             RENDER.COM (Backend)                  │
+│    Express · TypeScript (tsup build)             │
+│  ┌─────────────┐  ┌───────────────────────┐      │
+│  │  REST API   │  │  Baileys WhatsApp Bot │      │
+│  │  (Zod+JWT)  │  │  (Supabase Auth State)│      │
+│  └──────┬──────┘  └──────────┬────────────┘      │
+│         │                    │                    │
+│         ▼                    ▼                    │
+│  ┌─────────────────────────────────────┐         │
+│  │         Supabase (PostgreSQL)       │         │
+│  │   Dados · RPC Atômicas · Auth Keys │         │
+│  └─────────────────────────────────────┘         │
+│         │                                         │
+│         ▼                                         │
+│  ┌─────────────────────────────────────┐         │
+│  │          xAI / Grok API             │         │
+│  │    Insights de Negócio via Chat     │         │
+│  └─────────────────────────────────────┘         │
+└──────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
-### Backend
-
-| Tecnologia | Versão | Finalidade |
-|---|---|---|
-| Node.js | 18+ | Runtime |
-| TypeScript | 5.7 | Tipagem estática |
-| Express | 4.21 | Framework HTTP |
-| Supabase | 2.98 | PostgreSQL via PostgREST |
-| Zod | 3.24 | Validação de dados |
-| JWT + bcrypt | — | Autenticação e segurança |
-| Swagger UI | 5.0 | Documentação interativa da API |
-
-### Frontend
-
-| Tecnologia | Versão | Finalidade |
-|---|---|---|
-| React | 18.2 | UI framework |
-| Vite | 5.2 | Build tool + dev server |
-| Tailwind CSS | 4.2 | Design System + estilização |
-| React Router DOM | 6.22 | Roteamento SPA |
-| Axios | 1.13 | HTTP client |
-| Recharts | 2.12 | Gráficos (Bar, Pie, Line) |
-| React Icons | 5.0 | Ícones (Feather Icons) |
-
-### Infraestrutura
-
-| Componente | Tecnologia |
-|---|---|
-| Banco de dados | PostgreSQL (Supabase) |
-| Autenticação | JWT customizado (HMAC-SHA256) |
-| Hospedagem do banco | Supabase Cloud |
+| Camada        | Tecnologia                                       |
+|---------------|--------------------------------------------------|
+| **Frontend**  | React 18, Vite 5, Tailwind CSS v4, Recharts      |
+| **Backend**   | Node.js, Express 4, TypeScript (strict mode)      |
+| **Build**     | ``tsup`` (backend) · Vite (frontend)              |
+| **Database**  | Supabase (PostgreSQL) com RPCs atômicas           |
+| **Auth**      | JWT + bcrypt + RBAC (3 perfis)                    |
+| **Validação** | Zod (DTOs runtime) + Swagger/OpenAPI              |
+| **WhatsApp**  | Baileys v7 + Custom Supabase Auth State           |
+| **IA**        | Grok 2 (xAI) via OpenAI SDK + fallback chain     |
+| **Segurança** | Helmet, CORS, Rate Limiting, CSP                  |
+| **Testes**    | Vitest                                            |
+| **Deploy**    | Vercel (frontend) + Render.com (backend)          |
 
 ---
 
-## 📁 Estrutura do Projeto
+## 🚀 Deploy e Ambiente
 
-```
-rangô/
-├── backend/                    ← API REST (Node.js + TypeScript)
-│   ├── src/
-│   │   ├── server.ts           ← Entry point (porta 3000)
-│   │   ├── config/             ← Database + Swagger
-│   │   ├── controllers/        ← Handlers HTTP
-│   │   ├── dtos/               ← Schemas Zod (validação)
-│   │   ├── middlewares/        ← Auth, validação, erros
-│   │   ├── models/             ← Interfaces TypeScript
-│   │   ├── routes/             ← Definição de rotas
-│   │   └── services/           ← Lógica de negócio
-│   ├── create_tables.sql       ← DDL do banco
-│   ├── migrate_dashboard_rpcs.sql     ← RPCs v1 (KPIs, vendas/mês, status)
-│   └── migrate_dashboard_rpcs_v2.sql  ← RPCs v2 (cancelados + top produtos)
-│
-├── frontend/                   ← SPA React + Tailwind CSS v4
-│   ├── src/
-│   │   ├── componentes/        ← Layout, BarraLateral, Modal, Tabela, Spinner
-│   │   ├── contextos/          ← AuthContext, PedidosContext
-│   │   ├── paginas/            ← Login, Dashboard, Pedidos, Clientes, Produtos...
-│   │   ├── rotas/              ← Rotas + guard de autenticação
-│   │   ├── servicos/           ← Chamadas HTTP (Axios)
-│   │   └── index.css           ← Design System (@theme Tailwind v4)
-│   └── public/                 ← Assets estáticos (logo)
-│
-├── DOCUMENTACAO_TECNICA.md     ← Referência técnica completa
-└── DOCUMENTACAO_NEGOCIO.md     ← Documento de negócio (banca)
+### Frontend — Vercel
+O frontend é uma **Single Page Application** React servida pelo Vercel. O ficheiro ``vercel.json`` configura um rewrite universal que redireciona todas as rotas para ``index.html``, permitindo que o React Router gerencie o roteamento no lado do cliente:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
 ```
 
----
-
-## 🚀 Instalação e Execução
-
-### Pré-requisitos
-
-- [Node.js](https://nodejs.org/) v18+
-- npm (incluído com o Node.js)
-- Conta no [Supabase](https://supabase.com/) com o banco configurado
-
-### 1. Clonar o repositório
+### Backend — Render.com
+O backend é compilado com **tsup** (bundler baseado em esbuild) que gera um bundle CJS otimizado e ultra-rápido — contornando limitações de RAM do Render no free tier onde o ``tsc`` convencional falhava por falta de memória:
 
 ```bash
-git clone https://github.com/seu-usuario/rango.git
-cd rango
+tsup src/server.ts src/seed.ts --format cjs --clean
 ```
 
-### 2. Configurar variáveis de ambiente
+O servidor Express inicia imediatamente na porta configurada e inicializa em paralelo a conexão Supabase e o bot Baileys.
 
-Crie o arquivo `backend/.env` baseado no exemplo:
+### Database — Supabase
+O Supabase hospeda o PostgreSQL com:
+- **7 tabelas principais**: ``usuarios``, ``clientes``, ``produtos``, ``pedidos``, ``itens_pedido``, ``sessoes_whatsapp``, ``whatsapp_mensagens``
+- **Tabela de auth**: ``whatsapp_auth_state`` (Signal keys do Baileys)
+- **RPCs atômicas**: ``criar_pedido_atomico`` para criação transacional de pedidos
 
-```env
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_KEY=sua_service_role_key
-JWT_KEY=sua_chave_secreta_jwt
-```
+---
 
-### 3. Configurar o banco de dados
+## 🔑 Variáveis de Ambiente
 
-Execute os scripts SQL no **Supabase SQL Editor** na seguinte ordem:
+### Backend (``backend/.env``)
 
-```
-1. backend/create_tables.sql            ← Cria as tabelas
-2. backend/migrate_dashboard_rpcs.sql   ← RPCs do Dashboard v1
-3. backend/migrate_dashboard_rpcs_v2.sql ← RPCs do Dashboard v2 (cancelados + ranking)
-```
+| Variável                    | Descrição                                    | Obrigatória |
+|-----------------------------|----------------------------------------------|:-----------:|
+| ``SUPABASE_URL``            | URL do projeto Supabase                      | ✅          |
+| ``SUPABASE_KEY``            | Service Role Key do Supabase                 | ✅          |
+| ``JWT_KEY``                 | Chave secreta para assinatura JWT (256-bit)  | ✅          |
+| ``PORT``                    | Porta do servidor (default: ``3000``)        | ❌          |
+| ``CORS_ORIGINS``            | Origens permitidas (separadas por vírgula)   | ✅          |
+| ``NODE_ENV``                | Ambiente (``development`` / ``production``)  | ✅          |
+| ``WHATSAPP_ADMIN_JID``      | JID do administrador no WhatsApp             | ✅          |
+| ``WHATSAPP_SESSION_ID``     | ID da sessão Baileys (default: ``rango-prod``) | ✅       |
+| ``WHATSAPP_BAILEYS_ENABLED``| Ativar/desativar o bot (``true`` / ``false``)| ✅          |
+| ``GROK_API_KEY``            | Chave da API xAI (Grok) — prioritária       | ❌          |
+| ``GROQ_API_KEY``            | Chave da API Groq (fallback)                 | ✅          |
+| ``GEMINI_API_KEY``          | Chave da API Gemini (fallback)               | ❌          |
+| ``OPENAI_API_KEY``          | Chave da API OpenAI (último fallback)        | ❌          |
 
-### 4. Backend
+> **Nota:** Pelo menos uma chave de IA é recomendada para ativar os insights no Dashboard.
+
+---
+
+## 📜 Scripts de Desenvolvimento
+
+### Backend
 
 ```bash
 cd backend
-npm install
-npm run seed    # Cria o usuário admin padrão
-npm run dev     # Inicia em http://localhost:3000
+npm run dev        # Dev server com hot-reload (ts-node-dev)
+npm run build      # Build de produção com tsup
+npm start          # Iniciar build de produção
+npm run seed       # Popular base de dados com dados iniciais
+npm test           # Executar testes com Vitest
 ```
 
-> 📖 Documentação da API disponível em `http://localhost:3000/api-docs`
-
-### 5. Frontend
+### Frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev     # Inicia em http://localhost:5173
+npm run dev        # Dev server Vite (HMR)
+npm run build      # Build de produção
+npm run preview    # Preview do build local
 ```
 
 ---
 
-## 🎨 Design System
+## 📁 Estrutura do Repositório
 
-O frontend utiliza **Tailwind CSS v4** com um Design System customizado definido via `@theme`:
-
-| Token | Cor | Uso |
-|---|---|---|
-| `primary-500` | `#d97706` 🟠 | Botões, links, destaques, gráficos |
-| `grafite-800` | `#1f2937` ⚫ | Textos principais |
-| `grafite-50` | `#f9fafb` ⚪ | Background da aplicação |
-| `sucesso` | `#16a34a` 🟢 | Status positivos, receita |
-| `erro` | `#dc2626` 🔴 | Erros, cancelamentos, ações destrutivas |
-
-**Efeitos visuais:** `rounded-2xl` · `shadow-soft` · glassmorphism (`backdrop-blur`) · animações (`fade-in`, `slide-up`)
+```
+x-salgados/
+├── README.md                        # Este ficheiro
+├── DOCUMENTACAO_TECNICA.md          # Arquitetura, decisões técnicas, API
+├── DOCUMENTACAO_NEGOCIO.md          # Regras de negócio e fluxos
+│
+├── backend/
+│   ├── src/
+│   │   ├── server.ts                # Entry point Express
+│   │   ├── seed.ts                  # Script de seeding
+│   │   ├── config/                  # Supabase client, Swagger config
+│   │   ├── controllers/             # Handlers HTTP
+│   │   ├── services/                # Lógica de negócio
+│   │   │   ├── ai.service.ts        # Integração Grok/xAI
+│   │   │   ├── baileys.service.ts   # Conexão WhatsApp
+│   │   │   ├── whatsapp.service.ts  # Fluxo conversacional do bot
+│   │   │   ├── bot-state.service.ts # Máquina de estados do bot
+│   │   │   ├── supabase-auth-state.service.ts  # Persistência Signal keys
+│   │   │   ├── jid-resolver.service.ts         # Mapeamento LID ↔ Telefone
+│   │   │   └── pedido.service.ts    # Pedidos + lógica de lotes
+│   │   ├── dtos/                    # Schemas Zod (validação runtime)
+│   │   ├── models/                  # Enums (StatusPedido, PerfilUsuario)
+│   │   ├── middlewares/             # Auth JWT, Error handler
+│   │   └── routes/                  # Definição de rotas Express
+│   ├── sql/                         # Migrações SQL
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx                  # Root com providers de contexto
+│   │   ├── index.css                # Design system Tailwind
+│   │   ├── componentes/             # BarraLateral, Modal, Spinner, Tabela
+│   │   ├── contextos/               # Auth + Pedidos (React Context)
+│   │   ├── paginas/                 # Dashboard, Pedidos, Clientes, Entregas...
+│   │   ├── rotas/                   # Configuração React Router
+│   │   ├── servicos/                # Clientes HTTP (Axios)
+│   │   └── types/                   # Interfaces TypeScript
+│   ├── vercel.json                  # SPA rewrite config
+│   ├── vite.config.js
+│   └── package.json
+```
 
 ---
 
-## 📄 Documentação
+## 📚 Documentação Complementar
 
-| Documento | Descrição |
-|---|---|
-| [DOCUMENTACAO_TECNICA.md](./DOCUMENTACAO_TECNICA.md) | Referência técnica completa (stack, banco, endpoints, DTOs) |
-| [DOCUMENTACAO_NEGOCIO.md](./DOCUMENTACAO_NEGOCIO.md) | Documento de negócio para apresentação |
-| `/api-docs` | Swagger UI interativo (com o backend rodando) |
-
----
-
-## 👥 Credenciais Padrão
-
-Após rodar o `npm run seed`, o sistema cria um usuário admin:
-
-| Campo | Valor |
-|---|---|
-| Email | `admin@rango.com` |
-| Senha | `admin123` |
-
-> ⚠️ **Altere a senha padrão em ambiente de produção.**
+| Documento | Conteúdo |
+|-----------|----------|
+| [DOCUMENTACAO_TECNICA.md](DOCUMENTACAO_TECNICA.md) | Arquitetura detalhada, decisões técnicas, esquema de BD, API endpoints |
+| [DOCUMENTACAO_NEGOCIO.md](DOCUMENTACAO_NEGOCIO.md) | Regras de negócio, fluxo WhatsApp, expedição, cancelamentos |
+| [INTEGRACAO_WHATSAPP.md](INTEGRACAO_WHATSAPP.md) | Guia completo da integração Baileys + Supabase Auth State |
 
 ---
 
-<div align="center">
-
-Feito com ☕ e muito rangô. 🍽️
-
-</div>
+<p align="center">
+  <strong>Rangô</strong> — Feito com 🔥 e muito salgado.
+</p>
