@@ -14,7 +14,7 @@
 // ─── STATUS DE PEDIDO ──────────────────────────────────────────────────────────
 
 /** Backend label → Frontend constant */
-const STATUS_DO_BACKEND = {
+const STATUS_DO_BACKEND: Record<string, string> = {
   'Pendente': 'PENDENTE',
   'Em Produção': 'EM_PREPARO',
   'Pronto': 'PRONTO',
@@ -24,7 +24,7 @@ const STATUS_DO_BACKEND = {
 };
 
 /** Frontend constant → Backend enum value (numérico) */
-const STATUS_PARA_BACKEND = {
+const STATUS_PARA_BACKEND: Record<string, number> = {
   'PENDENTE': 1,
   'EM_PREPARO': 2,
   'EM_PRODUCAO': 2,  // alias usado pelo Kanban
@@ -39,7 +39,7 @@ const STATUS_PARA_BACKEND = {
  * @param {string} statusBackend - Ex: "Pendente", "Em Produção"
  * @returns {string} Ex: "PENDENTE", "EM_PREPARO"
  */
-export function mapStatusDoBackend(statusBackend) {
+export function mapStatusDoBackend(statusBackend: string): string {
   return STATUS_DO_BACKEND[statusBackend] || statusBackend;
 }
 
@@ -48,21 +48,21 @@ export function mapStatusDoBackend(statusBackend) {
  * @param {string} statusFrontend - Ex: "PENDENTE", "EM_PREPARO"
  * @returns {number} Ex: 1, 2
  */
-export function mapStatusParaBackend(statusFrontend) {
+export function mapStatusParaBackend(statusFrontend: string): number {
   return STATUS_PARA_BACKEND[statusFrontend] || 1;
 }
 
 // ─── PERFIL DE USUÁRIO ─────────────────────────────────────────────────────────
 
 /** Backend label → Frontend constant */
-const PERFIL_DO_BACKEND = {
+const PERFIL_DO_BACKEND: Record<string, string> = {
   'Administrador': 'ADMINISTRADOR',
   'Atendente': 'ATENDENTE',
   'Entregador': 'ENTREGADOR',
 };
 
 /** Frontend constant → Backend enum value (numérico) */
-const PERFIL_PARA_BACKEND = {
+const PERFIL_PARA_BACKEND: Record<string, number> = {
   'ADMINISTRADOR': 1,
   'ATENDENTE': 2,
   'ENTREGADOR': 3,
@@ -73,7 +73,7 @@ const PERFIL_PARA_BACKEND = {
  * @param {string} perfilBackend - Ex: "Administrador"
  * @returns {string} Ex: "ADMINISTRADOR"
  */
-export function mapPerfilDoBackend(perfilBackend) {
+export function mapPerfilDoBackend(perfilBackend: string): string {
   return PERFIL_DO_BACKEND[perfilBackend] || perfilBackend;
 }
 
@@ -82,7 +82,7 @@ export function mapPerfilDoBackend(perfilBackend) {
  * @param {string} roleFrontend - Ex: "ADMINISTRADOR"
  * @returns {number} Ex: 1
  */
-export function mapPerfilParaBackend(roleFrontend) {
+export function mapPerfilParaBackend(roleFrontend: string): number {
   return PERFIL_PARA_BACKEND[roleFrontend] || 1;
 }
 
@@ -93,7 +93,7 @@ export function mapPerfilParaBackend(roleFrontend) {
  * Backend: { id, nome, email, perfil, dataCriacao, ativo }
  * Frontend: { id, nome, email, role, dataCriacao, ativo }
  */
-export function mapUsuarioDoBackend(usuario) {
+export function mapUsuarioDoBackend(usuario: any) {
   if (!usuario) return null;
   return {
     ...usuario,
@@ -102,37 +102,41 @@ export function mapUsuarioDoBackend(usuario) {
 }
 
 /**
- * Mapeia um pedido do backend (PedidoResumoDto) para o formato do frontend.
- * Backend: { id, clienteId, clienteNome, dataCriacao, dataEntrega, valorTotal, status, observacoes }
- * Frontend: { id, clienteId, dataPedido, total, status, cliente: { nome }, observacoes, dataEntrega }
+ * Mapeia um pedido do backend (PedidoDto / PedidoResumoDto) para o formato do frontend.
+ * Backend: { id, clienteId, clienteNome, clienteTelefone, clienteEndereco, dataCriacao, dataEntrega, valorTotal, status, observacoes, itens, totalItens }
+ * Frontend: { id, clienteId, dataPedido, total, status, cliente: { nome, endereco, telefone }, observacoes, dataEntrega, itens, totalItens }
  */
-export function mapPedidoDoBackend(pedido) {
+export function mapPedidoDoBackend(pedido: any) {
   if (!pedido) return null;
   return {
     id: pedido.id,
     clienteId: pedido.clienteId,
-    cliente: { nome: pedido.clienteNome || 'Cliente' },
+    cliente: {
+      nome: pedido.clienteNome || 'Cliente',
+      endereco: pedido.clienteEndereco || '',
+      telefone: pedido.clienteTelefone || '',
+    },
     dataPedido: pedido.dataCriacao,
     dataEntrega: pedido.dataEntrega,
     total: pedido.valorTotal,
     status: mapStatusDoBackend(pedido.status),
     observacoes: pedido.observacoes,
-    // Preservar campos extras do backend caso sejam usados
     itens: pedido.itens?.map(mapItemPedidoDoBackend) || undefined,
+    totalItens: pedido.totalItens,
   };
 }
 
 /**
  * Mapeia um item de pedido do backend para o formato do frontend.
  */
-export function mapItemPedidoDoBackend(item) {
+export function mapItemPedidoDoBackend(item: any) {
   if (!item) return null;
   return {
     id: item.id,
     produtoId: item.produtoId,
     produtoNome: item.produtoNome,
     quantidade: item.quantidade,
-    precoUnitario: item.precoUnitarioSnapshot,
+    precoUnitario: item.precoUnitarioSnapshot ?? item.precoUnitario,
     subtotal: item.subtotal,
   };
 }
@@ -142,7 +146,7 @@ export function mapItemPedidoDoBackend(item) {
  * Backend: { id, nome, categoria, descricao, preco, ativo, dataCriacao }
  * Frontend: { id, nome, categoria, descricao, preco, ativo, dataCriacao }
  */
-export function mapProdutoDoBackend(produto) {
+export function mapProdutoDoBackend(produto: any) {
   if (!produto) return null;
   return {
     id: produto.id,
@@ -160,7 +164,7 @@ export function mapProdutoDoBackend(produto) {
  * Backend: { id, nome, telefone, email, endereco, cidade, cep, dataCriacao, totalPedidos }
  * Frontend: { id, nome, email, telefone, endereco, cidade, cep, dataCriacao, totalPedidos }
  */
-export function mapClienteDoBackend(cliente) {
+export function mapClienteDoBackend(cliente: any) {
   if (!cliente) return null;
   return {
     id: cliente.id,

@@ -9,13 +9,13 @@ export interface LoteEntregaResponse {
 
 export const buscarLoteEntrega = async (): Promise<LoteEntregaResponse> => {
   const response = await api.get('/api/entregas/lote');
-  const { pedidosProntos, totalItensAcumulados } = response.data;
+  const { pedidosProntos, totalLote } = response.data;
 
   return {
     pedidosProntos: Array.isArray(pedidosProntos)
-      ? pedidosProntos.map(mapPedidoDoBackend)
+      ? pedidosProntos.map(mapPedidoDoBackend).filter(Boolean) as Pedido[]
       : [],
-    totalItensAcumulados: totalItensAcumulados || 0,
+    totalItensAcumulados: totalLote || 0,
   };
 };
 
@@ -42,7 +42,7 @@ export const buscarPedidosEmTransito = async (): Promise<EmTransitoResponse> => 
 
   return {
     pedidosEmTransito: Array.isArray(pedidosEmTransito)
-      ? pedidosEmTransito.map(mapPedidoDoBackend)
+      ? pedidosEmTransito.map(mapPedidoDoBackend).filter(Boolean) as Pedido[]
       : [],
     totalPedidos: totalPedidos || 0,
     valorTotal: valorTotal || 0,
