@@ -1056,26 +1056,15 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
             return;
         }
 
-        // ── 7. Verificar se já existe um pedido ativo para este cliente
-        const pedidoAtivo = await buscarPedidoAtivo(cliente.id);
-
-        if (pedidoAtivo) {
-            // Salvar estado e enviar menu interativo
-            await definirEstado(telefoneLimpo, EtapaConversa.MENU_PEDIDO_ATIVO, {
-                pedidoAtivoId: pedidoAtivo.id,
-            });
-            await enviarMenuPedidoAtivo(remoteJid, cliente.nome, pedidoAtivo);
-            console.log(`[WhatsApp] Menu de pedido ativo enviado para ${cliente.nome} (Pedido #${pedidoAtivo.id}).`);
-            return;
-        }
-
-        // ── 8. Sem pedido ativo → verificar se está no menu de quantidade
+        // ── 7. Sessão tem precedência: verificar se está no menu de quantidade
+        //    (ANTES de buscarPedidoAtivo para evitar loop quando cliente
+        //     escolhe "Novo Pedido" mas ainda possui um pedido ativo no banco)
         if (estadoAtual?.etapa === EtapaConversa.MENU_QUANTIDADE) {
             await processarMenuQuantidade(remoteJid, texto, cliente, telefoneLimpo);
             return;
         }
 
-        // ── 9. Sem pedido ativo → verificar se está no menu de produto
+        // ── 8. Sessão tem precedência: verificar se está no menu de produto
         if (estadoAtual?.etapa === EtapaConversa.MENU_PRODUTO) {
             const quantidade = estadoAtual.dados.quantidadeEscolhida;
             if (!quantidade) {
@@ -1086,6 +1075,20 @@ export async function processarMensagemAsync(payload: WhatsAppPayload): Promise<
                 return;
             }
             await processarMenuProdutoEFinalizar(remoteJid, texto, cliente, telefoneLimpo, quantidade);
+            return;
+        }
+
+        // ── 9. Verificar se já existe um pedido ativo para este cliente
+        //    (Só é alcançado se NÃO há sessão de menu ativa — sem risco de loop)
+        const pedidoAtivo = await buscarPedidoAtivo(cliente.id);
+
+        if (pedidoAtivo) {
+            // Salvar estado e enviar menu interativo
+            await definirEstado(telefoneLimpo, EtapaConversa.MENU_PEDIDO_ATIVO, {
+                pedidoAtivoId: pedidoAtivo.id,
+            });
+            await enviarMenuPedidoAtivo(remoteJid, cliente.nome, pedidoAtivo);
+            console.log(`[WhatsApp] Menu de pedido ativo enviado para ${cliente.nome} (Pedido #${pedidoAtivo.id}).`);
             return;
         }
 
