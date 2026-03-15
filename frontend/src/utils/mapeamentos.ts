@@ -155,6 +155,7 @@ export function mapProdutoDoBackend(produto: any) {
     descricao: produto.descricao || '',
     preco: produto.preco,
     ativo: produto.ativo,
+    estoque: produto.estoque ?? 0,
     dataCriacao: produto.dataCriacao,
   };
 }

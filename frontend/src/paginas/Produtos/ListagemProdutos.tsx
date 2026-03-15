@@ -76,6 +76,26 @@ function ListagemProdutos() {
     { cabecalho: 'Categoria', chave: 'categoria' },
     { cabecalho: 'Preço', render: (produto) => `R$ ${produto.preco.toFixed(2)}` },
     {
+      cabecalho: 'Estoque', render: (produto) => {
+        const estoque = produto.estoque ?? 0;
+        if (estoque === 0) {
+          return (
+            <span className="inline-flex items-center rounded-full bg-erro/10 px-2.5 py-0.5 text-xs font-semibold text-erro">
+              Esgotado
+            </span>
+          );
+        }
+        if (estoque <= 500) {
+          return (
+            <span className="inline-flex items-center rounded-full bg-aviso/10 px-2.5 py-0.5 text-xs font-semibold text-aviso">
+              {estoque}
+            </span>
+          );
+        }
+        return <span className="text-sm text-grafite-700">{estoque}</span>;
+      }
+    },
+    {
       cabecalho: 'Status', render: (produto) => (
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${produto.ativo
             ? 'bg-sucesso/10 text-sucesso'

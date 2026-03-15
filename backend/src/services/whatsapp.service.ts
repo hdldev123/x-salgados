@@ -536,8 +536,9 @@ async function processarMenuQuantidade(
 async function enviarMenuProduto(remoteJid: string, quantidade: number): Promise<void> {
     const { data: produtos, error } = await supabase
         .from('produtos')
-        .select('id, nome, preco')
+        .select('id, nome, preco, estoque')
         .eq('ativo', true)
+        .gt('estoque', 0)
         .order('nome', { ascending: true });
 
     if (error || !produtos || produtos.length === 0) {
@@ -548,8 +549,20 @@ async function enviarMenuProduto(remoteJid: string, quantidade: number): Promise
         return;
     }
 
-    const linhas = produtos.map((p, i) =>
-        `*[${i + 1}]* ${p.nome} — R$ ${Number(p.preco).toFixed(2)}/un`,
+    // Filtrar produtos que têm estoque suficiente para a quantidade solicitada
+    const produtosDisponiveis = produtos.filter(p => p.estoque >= quantidade);
+
+    if (produtosDisponiveis.length === 0) {
+        await enviarMensagem(
+            remoteJid,
+            `Desculpe, nenhum produto possui *${quantidade} unidades* em estoque no momento. 😔\n` +
+            `Tente uma quantidade menor ou volte mais tarde.`,
+        );
+        return;
+    }
+
+    const linhas = produtosDisponiveis.map((p, i) =>
+        `*[${i + 1}]* ${p.nome} — R$ ${Number(p.preco).toFixed(2)}/un (${p.estoque} em estoque)`,
     ).join('\n');
 
     await enviarMensagem(
@@ -573,11 +586,12 @@ async function processarMenuProdutoAdicionarCarrinho(
     quantidade: number,
     carrinhoAtual: ItemCarrinho[],
 ): Promise<void> {
-    // Buscar produtos ativos para validar o input
+    // Buscar produtos ativos com estoque para validar o input
     const { data: produtos, error: dbErr } = await supabase
         .from('produtos')
-        .select('id, nome, preco')
+        .select('id, nome, preco, estoque')
         .eq('ativo', true)
+        .gt('estoque', 0)
         .order('nome', { ascending: true });
 
     if (dbErr || !produtos || produtos.length === 0) {
@@ -589,11 +603,23 @@ async function processarMenuProdutoAdicionarCarrinho(
         return;
     }
 
+    // Filtrar por estoque suficiente para a quantidade solicitada
+    const produtosDisponiveis = produtos.filter(p => p.estoque >= quantidade);
+
+    if (produtosDisponiveis.length === 0) {
+        await limparEstado(telefoneLimpo);
+        await enviarMensagem(
+            remoteJid,
+            `Desculpe, nenhum produto possui *${quantidade} unidades* em estoque. 😔\nTente uma quantidade menor.`,
+        );
+        return;
+    }
+
     const opcao = parseInt(texto.trim(), 10);
 
-    if (isNaN(opcao) || opcao < 1 || opcao > produtos.length) {
-        const linhas = produtos.map((p, i) =>
-            `*[${i + 1}]* ${p.nome} — R$ ${Number(p.preco).toFixed(2)}/un`,
+    if (isNaN(opcao) || opcao < 1 || opcao > produtosDisponiveis.length) {
+        const linhas = produtosDisponiveis.map((p, i) =>
+            `*[${i + 1}]* ${p.nome} — R$ ${Number(p.preco).toFixed(2)}/un (${p.estoque} em estoque)`,
         ).join('\n');
 
         await enviarMensagem(
@@ -604,7 +630,7 @@ async function processarMenuProdutoAdicionarCarrinho(
         return; // Mantém no MENU_PRODUTO
     }
 
-    const produtoEscolhido = produtos[opcao - 1];
+    const produtoEscolhido = produtosDisponiveis[opcao - 1];
 
     // Adicionar item ao carrinho
     const novoItem: ItemCarrinho = {

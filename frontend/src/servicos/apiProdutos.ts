@@ -47,6 +47,7 @@ export interface CriarProdutoDto {
   descricao?: string;
   preco: number;
   ativo?: boolean;
+  estoque?: number;
 }
 
 export const criarProduto = async (dados: CriarProdutoDto): Promise<Produto> => {
@@ -60,6 +61,7 @@ export interface AtualizarProdutoDto {
   descricao?: string;
   preco?: number;
   ativo?: boolean;
+  estoque?: number;
 }
 
 export const atualizarProduto = async (id: number, dados: AtualizarProdutoDto): Promise<Produto> => {

@@ -8,5 +8,6 @@ export interface Produto {
   descricao: string | null;
   preco: number;
   ativo: boolean;
+  estoque: number;
   data_criacao: string;
 }

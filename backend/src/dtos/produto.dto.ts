@@ -19,6 +19,11 @@ export const CriarProdutoSchema = z.object({
     .min(0.01, 'Preço deve ser entre 0.01 e 99999.99')
     .max(99999.99, 'Preço deve ser entre 0.01 e 99999.99'),
   ativo: z.boolean().default(true),
+  estoque: z
+    .number({ required_error: 'Estoque é obrigatório' })
+    .int('Estoque deve ser um número inteiro')
+    .min(0, 'Estoque não pode ser negativo')
+    .default(0),
 });
 export type CriarProdutoDto = z.infer<typeof CriarProdutoSchema>;
 
@@ -34,5 +39,6 @@ export interface ProdutoDto {
   descricao: string | null;
   preco: number;
   ativo: boolean;
+  estoque: number;
   dataCriacao: Date;
 }

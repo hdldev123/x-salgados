@@ -71,6 +71,7 @@ export interface Produto {
   descricao?: string;
   preco: number;
   ativo?: boolean;
+  estoque?: number;
   dataCriacao?: string;
 }
 
