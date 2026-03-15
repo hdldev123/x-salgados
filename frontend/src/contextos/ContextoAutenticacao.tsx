@@ -42,14 +42,16 @@ export function ProvedorAutenticacao({ children }: { children: ReactNode }) {
 
       switch (dadosUsuario.role) {
         case 'ADMINISTRADOR':
-        case 'ATENDENTE':
           navigate('/');
+          break;
+        case 'ATENDENTE':
+          navigate('/pedidos');
           break;
         case 'ENTREGADOR':
           navigate('/entregas');
           break;
         default:
-          navigate('/');
+          navigate('/pedidos');
       }
 
     } catch (erro) {

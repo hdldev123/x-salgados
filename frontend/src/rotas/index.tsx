@@ -33,7 +33,7 @@ function RotasApp() {
         <Route 
           index 
           element={
-            <RotaProtegida papeisPermitidos={['ADMINISTRADOR', 'ATENDENTE']}>
+            <RotaProtegida papeisPermitidos={['ADMINISTRADOR']}>
               <Dashboard />
             </RotaProtegida>
           } 
@@ -65,7 +65,7 @@ function RotasApp() {
         <Route 
           path="produtos" 
           element={
-            <RotaProtegida papeisPermitidos={['ADMINISTRADOR', 'ATENDENTE']}>
+            <RotaProtegida papeisPermitidos={['ADMINISTRADOR']}>
               <ListagemProdutos />
             </RotaProtegida>
           } 

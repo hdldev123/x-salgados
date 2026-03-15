@@ -21,12 +21,18 @@ function ListagemPedidos() {
     limparNotificacao
   } = usePedidos();
 
-  // Carregar dados iniciais
+  // Carregar dados iniciais — filtra por intervalo de datas para trazer
+  // apenas pedidos recentes e evitar misturar com histórico antigo.
   useEffect(() => {
     const carregarDadosIniciais = async () => {
       try {
-        // Carregar pedidos usando o contexto
-        await carregarPedidos();
+        const hoje = new Date();
+        const seteDiasAtras = new Date(hoje);
+        seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+
+        await carregarPedidos({
+          dataInicio: seteDiasAtras.toISOString().split('T')[0],
+        });
 
         // Carregar clientes
         const dadosClientes = await buscarClientes();
@@ -124,25 +130,29 @@ function ListagemPedidos() {
         </div>
       </div>
 
-      {/* Indicadores rápidos */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { numero: pedidos.length, label: 'Total de Pedidos' },
-          { numero: pedidos.filter(p => p.status === 'PENDENTE' || p.status === 1).length, label: 'Pendentes' },
-          { numero: pedidos.filter(p => p.status === 'EM_PREPARO' || p.status === 2).length, label: 'Em Produção' },
-          { numero: pedidos.filter(p => p.status === 'PRONTO' || p.status === 3).length, label: 'Prontos' },
-        ].map((item, i) => (
-          <div
-            key={i}
-            className="rounded-2xl border border-grafite-200 bg-white p-4 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
-          >
-            <span className="block text-2xl font-bold text-primary-500">{item.numero}</span>
-            <span className="mt-1 block text-xs uppercase tracking-wider text-grafite-400">
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* Indicadores rápidos — exibidos apenas na visualização de tabela.
+          Na visualização Kanban, os KPIs estão dentro do PedidosKanban
+          como estado derivado das colunas para evitar dessincronização. */}
+      {visualizacao === 'tabela' && (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { numero: pedidos.filter(p => p.status !== 'CANCELADO').length, label: 'Total de Pedidos' },
+            { numero: pedidos.filter(p => p.status === 'PENDENTE').length, label: 'Pendentes' },
+            { numero: pedidos.filter(p => p.status === 'EM_PREPARO').length, label: 'Em Produção' },
+            { numero: pedidos.filter(p => p.status === 'PRONTO').length, label: 'Prontos' },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-grafite-200 bg-white p-4 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <span className="block text-2xl font-bold text-primary-500">{item.numero}</span>
+              <span className="mt-1 block text-xs uppercase tracking-wider text-grafite-400">
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Conteúdo principal */}
       {carregando && <Spinner />}

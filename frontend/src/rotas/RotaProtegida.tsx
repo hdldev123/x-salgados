@@ -28,6 +28,9 @@ function RotaProtegida({ children, papeisPermitidos }: RotaProtegidaProps) {
     if (usuario.role === 'ENTREGADOR') {
       return <Navigate to="/entregas" replace />;
     }
+    if (usuario.role === 'ATENDENTE') {
+      return <Navigate to="/pedidos" replace />;
+    }
     return <Navigate to="/" replace />;
   }
 

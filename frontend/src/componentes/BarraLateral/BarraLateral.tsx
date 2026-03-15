@@ -27,7 +27,7 @@ function temFilhos(item: ItemMenu): item is MenuItemComSub {
 }
 
 const menuItens: ItemMenu[] = [
-  { icone: <FiHome />, texto: "Dashboard", para: "/", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
+  { icone: <FiHome />, texto: "Dashboard", para: "/", papeis: ['ADMINISTRADOR'] },
   {
     icone: <FiClipboard />,
     texto: "Pedidos",
@@ -38,7 +38,7 @@ const menuItens: ItemMenu[] = [
     ],
   },
   { icone: <FiUsers />, texto: "Clientes", para: "/clientes", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
-  { icone: <FiBox />, texto: "Produtos", para: "/produtos", papeis: ['ADMINISTRADOR', 'ATENDENTE'] },
+  { icone: <FiBox />, texto: "Produtos", para: "/produtos", papeis: ['ADMINISTRADOR'] },
   { icone: <FiUser />, texto: "Usuários", para: "/usuarios", papeis: ['ADMINISTRADOR'] },
   { icone: <FiTruck />, texto: "Rotas de Entrega", para: "/entregas", papeis: ['ENTREGADOR'] },
 ];
