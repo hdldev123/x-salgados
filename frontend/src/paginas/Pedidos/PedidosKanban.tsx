@@ -205,6 +205,12 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanban
 
   const pedidosAgrupados = agruparPedidosPorStatus();
 
+  // --- KPIs derivados diretamente dos arrays que alimentam as colunas ---
+  const totalKanban = Object.values(pedidosAgrupados).reduce(
+    (soma, arr) => soma + arr.length,
+    0
+  );
+
   return (
     <div className="w-full">
       {/* Cabeçalho do Kanban */}
@@ -213,6 +219,35 @@ function PedidosKanban({ pedidos, onStatusChange, clientes = [] }: PedidosKanban
         <p className="mt-1 text-sm text-grafite-400">
           Gerencie o status dos pedidos através do fluxo de produção
         </p>
+      </div>
+
+      {/* Mini-Dashboard — Estado Derivado das colunas visíveis */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {/* Total = soma exata de todas as colunas do Kanban */}
+        <div className="rounded-2xl border border-grafite-200 bg-white p-4 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+          <span className="block text-2xl font-bold text-grafite-700">{totalKanban}</span>
+          <span className="mt-1 block text-xs uppercase tracking-wider text-grafite-400">
+            Total de Pedidos
+          </span>
+        </div>
+
+        {/* Um card por coluna, na mesma ordem do Kanban */}
+        {Object.entries(STATUS_CONFIG)
+          .sort(([, a], [, b]) => a.ordem - b.ordem)
+          .map(([status, config]) => (
+            <div
+              key={status}
+              className="rounded-2xl border border-grafite-200 bg-white p-4 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+              style={{ borderTopWidth: '3px', borderTopColor: config.cor }}
+            >
+              <span className="block text-2xl font-bold" style={{ color: config.cor }}>
+                {pedidosAgrupados[status]?.length ?? 0}
+              </span>
+              <span className="mt-1 block text-xs uppercase tracking-wider text-grafite-400">
+                {config.label}
+              </span>
+            </div>
+          ))}
       </div>
 
       {/* Grid de 5 colunas — scroll horizontal no mobile */}
