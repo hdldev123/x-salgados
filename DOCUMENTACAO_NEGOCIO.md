@@ -72,10 +72,20 @@ O sistema possui **três perfis** com permissões distintas:
 
 ### Regras do Catálogo
 
-- Cada produto tem: **nome**, **categoria**, **descrição**, **preço unitário** e **status ativo/inativo**
+- Cada produto tem: **nome**, **categoria**, **descrição**, **preço unitário**, **estoque** e **status ativo/inativo**
 - Apenas produtos com ``ativo = true`` são exibidos no bot do WhatsApp
 - O preço unitário é **congelado no momento do pedido** (``preco_unitario_snapshot``), garantindo que alterações futuras de preço não afetem pedidos existentes
 - Categorias são dinâmicas (texto livre), sem limite predefinido
+
+### Regras de Venda e Estoque
+
+| Regra | Descrição |
+|-------|----------|
+| **Pedido mínimo** | A unidade de venda mínima é **100 unidades** (1 cento) por item |
+| **Auto-inativação** | Quando o estoque de um produto cai abaixo de 100 unidades, ele é **automaticamente inativado** (``ativo = false``) |
+| **Efeito no Bot** | Produtos inativos desaparecem do menu do WhatsApp — o cliente nunca vê um produto que não pode ser atendido |
+| **Reativação** | Ao repor o estoque para ≥ 100 unidades (via painel admin), o produto é **automaticamente reativado** |
+| **Baixa automática** | A cada pedido finalizado, o estoque é decrementado atomicamente. Se o novo saldo ficar < 100, a inativação é imediata |
 
 ### Opções de Quantidade
 

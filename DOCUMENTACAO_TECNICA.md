@@ -322,6 +322,8 @@ $$;
 | PUT    | ``/produtos/:id``          | Admin           | Atualizar produto            |
 | DELETE | ``/produtos/:id``          | Admin           | Remover produto              |
 
+> **Hook de Sincronização `estoque ↔ ativo`**: O serviço `produto.service.ts` contém a função `sincronizarAtivo()` que é chamada automaticamente em toda criação e atualização de produto. A regra é: **`ativo = estoque >= 100`** (pedido mínimo = 100 unidades). Quando um pedido é criado (via `pedido.service.ts`), o estoque é decrementado atomicamente pela RPC `decrementar_estoque` e, se o saldo resultante ficar abaixo de 100, o produto é desativado automaticamente. Isso garante que o menu do WhatsApp (que filtra `ativo = true AND estoque > 0`) nunca exiba produtos que não possam atender o pedido mínimo.
+
 ### 4.4 Pedidos (Admin + Atendente)
 
 | Método | Rota                      | Acesso               | Descrição                      |

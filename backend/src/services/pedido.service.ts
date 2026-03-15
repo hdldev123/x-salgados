@@ -231,19 +231,19 @@ export async function criarAsync(
       console.error(`[PedidoService] Erro ao decrementar estoque do produto ${item.produto_id}:`, estoqueErr.message);
     }
 
-    // Verificar se estoque zerou → desativar produto automaticamente
+    // Verificar se estoque caiu abaixo do pedido mínimo (100) → desativar
     const { data: produtoAtual } = await supabase
       .from('produtos')
       .select('estoque')
       .eq('id', item.produto_id)
       .single();
 
-    if (produtoAtual && produtoAtual.estoque <= 0) {
+    if (produtoAtual && produtoAtual.estoque < 100) {
       await supabase
         .from('produtos')
         .update({ ativo: false })
         .eq('id', item.produto_id);
-      console.log(`[PedidoService] Produto ${item.produto_id} desativado automaticamente (estoque zerado).`);
+      console.log(`[PedidoService] Produto ${item.produto_id} desativado automaticamente (estoque ${produtoAtual.estoque} < 100).`);
     }
   }
 

@@ -78,9 +78,12 @@ export async function obterCategoriasAsync(): Promise<string[]> {
 }
 
 // ─── Sincronizar ativo ↔ estoque ─────────────────────────────────────
+// Pedido mínimo = 100 unidades. Produto com estoque < 100 é inativado.
+const PEDIDO_MINIMO = 100;
+
 function sincronizarAtivo(dados: { estoque?: number; ativo?: boolean }): void {
   if (dados.estoque !== undefined) {
-    dados.ativo = dados.estoque > 0;
+    dados.ativo = dados.estoque >= PEDIDO_MINIMO;
   }
 }
 
@@ -94,7 +97,7 @@ export async function criarAsync(dto: CriarProdutoDto): Promise<ProdutoDto> {
       categoria: dto.categoria,
       descricao: dto.descricao ?? null,
       preco: dto.preco,
-      ativo: estoque > 0,
+      ativo: estoque >= PEDIDO_MINIMO,
       estoque,
     })
     .select()
