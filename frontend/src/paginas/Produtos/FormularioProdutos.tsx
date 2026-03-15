@@ -48,9 +48,9 @@ function FormularioProduto({ produto, aoSalvar }: FormularioProdutoProps) {
 
     setFormData(prevState => {
       const next = { ...prevState, [name]: parsed };
-      // Auto-sync: estoque <= 0 desativa o produto
+      // Auto-sync: estoque < 100 desativa (pedido mínimo = 100 unidades)
       if (name === 'estoque') {
-        next.ativo = (parsed as number) > 0;
+        next.ativo = (parsed as number) >= 100;
       }
       return next;
     });
